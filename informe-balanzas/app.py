@@ -90,7 +90,7 @@ with col3:
 st.header("2. Cliente y Balanza")
 clientes = get_clientes()
 if not clientes:
-    st.error("No se encontró la base de datos. Asegurate de que existe data/base_datos.xlsx")
+    st.warning("No hay clientes cargados aún. Usá la sección 'Base de Datos' al final para agregar.")
     st.stop()
 
 cliente_sel = st.selectbox("Cliente", clientes)
