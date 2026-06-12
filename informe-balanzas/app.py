@@ -2,6 +2,7 @@ import json
 import os
 import random
 import datetime
+import pandas as pd
 import streamlit as st
 
 from database import (get_clientes, get_cliente_info, get_balanzas_de_cliente, get_balanza_info,
@@ -252,14 +253,7 @@ if _lista:
                     key="exc_pesa"
                 )
 
-            _sim_ctx = f"{balanza_sel}_{cap_max}_{div_min}_{int(pesa_exc)}"
-            if st.session_state.get("_sim_ctx") != _sim_ctx:
-                for k in list(st.session_state.keys()):
-                    if k.startswith("exc_ind_") or k.startswith("lin_ind_"):
-                        del st.session_state[k]
-                st.session_state["_sim_ctx"] = _sim_ctx
-
-            _s = f"{div_min:.10f}".rstrip("0")
+_s = f"{div_min:.10f}".rstrip("0")
             _dec = len(_s.split(".")[1]) if "." in _s else 0
 
             def _fmt(v):
@@ -271,31 +265,37 @@ if _lista:
                     v += random.choice([-1, 1]) * div_min
                 return _fmt(v)
 
-            for i in range(1, int(n_posiciones) + 1):
-                if f"exc_ind_{i}" not in st.session_state:
-                    st.session_state[f"exc_ind_{i}"] = _sim(int(pesa_exc))
-
-            exc_filas = []
-            exc_cols = st.columns([1, 2, 2, 2, 2, 2])
-            exc_cols[0].markdown("**N°**")
-            exc_cols[1].markdown("**Posición**")
-            exc_cols[2].markdown("**Pesas (kg)**")
-            exc_cols[3].markdown("**C/AUX**")
-            exc_cols[4].markdown("**Total (kg)**")
-            exc_cols[5].markdown("**Indicador (kg)**")
-
-            for i in range(1, int(n_posiciones) + 1):
-                row_cols = st.columns([1, 2, 2, 2, 2, 2])
-                row_cols[0].write(str(i))
-                posicion      = row_cols[1].text_input("", value=str(i),         key=f"exc_pos_{i}",   label_visibility="collapsed")
-                pesas_val     = row_cols[2].text_input("", value=_fmt(pesa_exc), key=f"exc_pesas_{i}", label_visibility="collapsed")
-                c_aux_val     = row_cols[3].text_input("", value="",             key=f"exc_caux_{i}",  label_visibility="collapsed")
-                total_val     = row_cols[4].text_input("", value=_fmt(pesa_exc), key=f"exc_total_{i}", label_visibility="collapsed")
-                indicador_val = row_cols[5].text_input("", value="",             key=f"exc_ind_{i}",   label_visibility="collapsed")
-                exc_filas.append({
-                    "n": i, "posicion": posicion, "pesas": pesas_val,
-                    "c_aux": c_aux_val, "total": total_val, "indicador": indicador_val,
-                })
+            exc_df_init = pd.DataFrame([
+                {
+                    "N°": i,
+                    "Posición": str(i),
+                    "Pesas (kg)": _fmt(pesa_exc),
+                    "C/AUX": "",
+                    "Total (kg)": _fmt(pesa_exc),
+                    "Indicador (kg)": _sim(int(pesa_exc)),
+                }
+                for i in range(1, int(n_posiciones) + 1)
+            ])
+            exc_edited = st.data_editor(
+                exc_df_init,
+                hide_index=True,
+                use_container_width=True,
+                key=f"exc_table_{balanza_sel}_{int(pesa_exc)}_{int(n_posiciones)}",
+                column_config={
+                    "N°": st.column_config.NumberColumn(width="small", disabled=True),
+                },
+            )
+            exc_filas = [
+                {
+                    "n": int(row["N°"]),
+                    "posicion": str(row["Posición"]),
+                    "pesas": str(row["Pesas (kg)"]),
+                    "c_aux": str(row["C/AUX"]),
+                    "total": str(row["Total (kg)"]),
+                    "indicador": str(row["Indicador (kg)"]),
+                }
+                for _, row in exc_edited.iterrows()
+            ]
 
             # ── 4e. LINEALIDAD ───────────────────────────────────────────────────────
             st.subheader("Linealidad")
@@ -335,31 +335,37 @@ if _lista:
                 lin_rows_def = [{"pesas": pesa_step * i, "c_aux": "", "total": pesa_step * i}
                                 for i in range(1, n_pasos + 1)]
 
-            for i, r in enumerate(lin_rows_def, start=1):
-                if f"lin_ind_{i}" not in st.session_state:
-                    st.session_state[f"lin_ind_{i}"] = _sim(r["total"])
-
-            lin_filas = []
-            lin_cols = st.columns([1, 2, 2, 2, 2, 2])
-            lin_cols[0].markdown("**N°**")
-            lin_cols[1].markdown("**Posición**")
-            lin_cols[2].markdown("**Pesas (kg)**")
-            lin_cols[3].markdown("**C/AUX**")
-            lin_cols[4].markdown("**Total (kg)**")
-            lin_cols[5].markdown("**Indicador (kg)**")
-
-            for i, r in enumerate(lin_rows_def, start=1):
-                row_cols = st.columns([1, 2, 2, 2, 2, 2])
-                row_cols[0].write(str(i))
-                posicion      = row_cols[1].text_input("", value=f"1-{apoyos_db}", key=f"lin_pos_{i}",   label_visibility="collapsed")
-                pesas_val     = row_cols[2].text_input("", value=_fmt(r["pesas"]),                            key=f"lin_pesas_{i}", label_visibility="collapsed")
-                c_aux_val     = row_cols[3].text_input("", value=_fmt(r["c_aux"]) if r["c_aux"] != "" else "", key=f"lin_caux_{i}", label_visibility="collapsed")
-                total_val     = row_cols[4].text_input("", value=_fmt(r["total"]),                            key=f"lin_total_{i}", label_visibility="collapsed")
-                indicador_val = row_cols[5].text_input("", value="",                key=f"lin_ind_{i}",   label_visibility="collapsed")
-                lin_filas.append({
-                    "n": i, "posicion": posicion, "pesas": pesas_val,
-                    "c_aux": c_aux_val, "total": total_val, "indicador": indicador_val,
-                })
+            lin_df_init = pd.DataFrame([
+                {
+                    "N°": i,
+                    "Posición": f"1-{apoyos_db}",
+                    "Pesas (kg)": _fmt(r["pesas"]),
+                    "C/AUX": _fmt(r["c_aux"]) if r["c_aux"] != "" else "",
+                    "Total (kg)": _fmt(r["total"]),
+                    "Indicador (kg)": _sim(r["total"]),
+                }
+                for i, r in enumerate(lin_rows_def, start=1)
+            ])
+            lin_edited = st.data_editor(
+                lin_df_init,
+                hide_index=True,
+                use_container_width=True,
+                key=f"lin_table_{balanza_sel}_{len(lin_rows_def)}",
+                column_config={
+                    "N°": st.column_config.NumberColumn(width="small", disabled=True),
+                },
+            )
+            lin_filas = [
+                {
+                    "n": int(row["N°"]),
+                    "posicion": str(row["Posición"]),
+                    "pesas": str(row["Pesas (kg)"]),
+                    "c_aux": str(row["C/AUX"]),
+                    "total": str(row["Total (kg)"]),
+                    "indicador": str(row["Indicador (kg)"]),
+                }
+                for _, row in lin_edited.iterrows()
+            ]
 
             # ── 4f. MOVILIDAD ────────────────────────────────────────────────────────
             if es_camion:
@@ -370,27 +376,39 @@ if _lista:
                 carga_max_mov = int(carga_sust) + int(pesas_disp)
 
                 st.caption(f"Sobrecarga = 1,4 × div. mín ({div_min} kg) = **{sobrecarga_camion_kg} kg**")
-                mov_cols = st.columns([2, 2, 2, 2, 2])
-                mov_cols[0].markdown("**Punto**")
-                mov_cols[1].markdown("**Carga aplicada (kg)**")
-                mov_cols[2].markdown("**Indicación (kg)**")
-                mov_cols[3].markdown("**Sobrecarga (kg)**")
-                mov_cols[4].markdown("**Indicación 2 (kg)**")
-
-                movilidad_camion = []
-                for label, carga_def in [("Carga mínima", carga_min_mov),
-                                          ("Carga intermedia", carga_int_mov),
-                                          ("Carga máxima", carga_max_mov)]:
-                    rc = st.columns([2, 2, 2, 2, 2])
-                    rc[0].write(label)
-                    carga_v = rc[1].text_input("", value=str(carga_def),            key=f"mov_{label}_c",  label_visibility="collapsed")
-                    ind_v   = rc[2].text_input("", value=str(carga_def),            key=f"mov_{label}_i",  label_visibility="collapsed")
-                    sc_v    = rc[3].text_input("", value=str(sobrecarga_camion_kg), key=f"mov_{label}_s",  label_visibility="collapsed")
-                    ind2_v  = rc[4].text_input("", value=str(round(carga_def + div_min, 2)), key=f"mov_{label}_i2", label_visibility="collapsed")
-                    movilidad_camion.append({
-                        "label": label, "carga": carga_v, "indicacion": ind_v,
-                        "sobrecarga": sc_v, "indicacion2": ind2_v,
-                    })
+                mov_df_init = pd.DataFrame([
+                    {
+                        "Punto": label,
+                        "Carga aplicada (kg)": str(carga_def),
+                        "Indicación (kg)": str(carga_def),
+                        "Sobrecarga (kg)": str(sobrecarga_camion_kg),
+                        "Indicación 2 (kg)": str(round(carga_def + div_min, 2)),
+                    }
+                    for label, carga_def in [
+                        ("Carga mínima", carga_min_mov),
+                        ("Carga intermedia", carga_int_mov),
+                        ("Carga máxima", carga_max_mov),
+                    ]
+                ])
+                mov_edited = st.data_editor(
+                    mov_df_init,
+                    hide_index=True,
+                    use_container_width=True,
+                    key=f"mov_table_{balanza_sel}",
+                    column_config={
+                        "Punto": st.column_config.TextColumn(disabled=True),
+                    },
+                )
+                movilidad_camion = [
+                    {
+                        "label": row["Punto"],
+                        "carga": row["Carga aplicada (kg)"],
+                        "indicacion": row["Indicación (kg)"],
+                        "sobrecarga": row["Sobrecarga (kg)"],
+                        "indicacion2": row["Indicación 2 (kg)"],
+                    }
+                    for _, row in mov_edited.iterrows()
+                ]
                 movilidad_data = {"tipo": "camion", "filas": movilidad_camion}
             else:
                 movilidad_data = {"tipo": "ninguna"}
