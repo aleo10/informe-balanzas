@@ -137,14 +137,14 @@ if _lista:
             nuevo_vig_plataforma = st.text_input(
                 "Precintos vigentes (plataforma)",
                 value=b["precintos_vig_plataforma"],
-                key="prec_vig_plat"
+                key=f"prec_vig_plat_{balanza_sel}"
             )
         with pc2:
             st.markdown("*Indicador Electrónico*")
             nuevo_vig_indicador = st.text_input(
                 "Precintos vigentes (indicador)",
                 value=b["precintos_vig_indicador"],
-                key="prec_vig_ind"
+                key=f"prec_vig_ind_{balanza_sel}"
             )
 
         plat_cambio = nuevo_vig_plataforma.strip() != b["precintos_vig_plataforma"].strip()
