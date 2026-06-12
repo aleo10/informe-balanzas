@@ -86,6 +86,412 @@ with col3:
     nro_if_default = get_next_number("IF")
     nro_if = st.number_input("N° Informe de Ensayo (IF)", min_value=1, value=nro_if_default, step=1)
 
+st.divider()
+
+# ── 2. CLIENTE Y BALANZA ─────────────────────────────────────────────────────
+st.header("2. Cliente y Balanza")
+clientes = get_clientes()
+_lista = bool(clientes)
+
+if not clientes:
+    st.warning("No hay clientes cargados aún. Usá la sección '🗄️ Base de Datos' al final de la página para agregar.")
+
+if _lista:
+    cliente_sel = st.selectbox("Cliente", clientes)
+    cliente_info = get_cliente_info(cliente_sel)
+    st.write(f"**Dirección:** {cliente_info.get('direccion', '')}  |  **Localidad:** {cliente_info.get('localidad', '')}")
+
+    balanzas = get_balanzas_de_cliente(cliente_sel)
+    if not balanzas:
+        st.warning("Este cliente no tiene balanzas en la base de datos.")
+        _lista = False
+
+if _lista:
+    balanza_sel = st.selectbox("Balanza (Código interno)", balanzas)
+    b = get_balanza_info(balanza_sel)
+
+    if b:
+        col_b1, col_b2, col_b3, col_b4 = st.columns(4)
+        col_b1.metric("Tipo", b["tipo_balanza"])
+        col_b2.metric("Cap. Máx", f"{b['cap_max']} kg")
+        col_b3.metric("Div. Mín", f"{b['div_min']} kg")
+        col_b4.metric("Ult. Verificación", b["ult_verificacion"] or "—")
+
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("**Indicador**")
+            st.write(f"Marca: {b['marca']}  |  Modelo: {b['mod_indicador']}  |  "
+                     f"N° Serie: {b['n_serie_indicador']}  |  Cod. Aprob.: {b['cod_aprobacion_indicador']}")
+        with c2:
+            st.markdown("**Plataforma**")
+            st.write(f"Tipo: {b['plataforma']}  |  Medidas: {b['medidas']}  |  "
+                     f"N° Serie: {b['n_serie_plataforma']}  |  Cod. Aprob.: {b['cod_aprobacion_plataforma']}")
+
+        st.write(f"**Ubicación:** {b['ubicacion']}  |  **Cod. Interno:** {b['cod_interno']}")
+
+        st.markdown("**Precintos**")
+        st.caption("Si se reemplazaron precintos, editá los valores nuevos. Al generar el PDF se actualizará la base de datos automáticamente.")
+        pc1, pc2 = st.columns(2)
+        with pc1:
+            st.markdown("*Parte base del Instrumento*")
+            nuevo_vig_plataforma = st.text_input(
+                "Precintos vigentes (plataforma)",
+                value=b["precintos_vig_plataforma"],
+                key="prec_vig_plat"
+            )
+        with pc2:
+            st.markdown("*Indicador Electrónico*")
+            nuevo_vig_indicador = st.text_input(
+                "Precintos vigentes (indicador)",
+                value=b["precintos_vig_indicador"],
+                key="prec_vig_ind"
+            )
+
+        plat_cambio = nuevo_vig_plataforma.strip() != b["precintos_vig_plataforma"].strip()
+        ind_cambio  = nuevo_vig_indicador.strip()  != b["precintos_vig_indicador"].strip()
+        precintos_cambiados = plat_cambio or ind_cambio
+        if precintos_cambiados:
+            st.warning("⚠️ Los precintos fueron modificados. Al generar el PDF se actualizará la base de datos.")
+
+        cap_max   = float(b.get("cap_max", 100) or 100)
+        tipo      = b.get("tipo_balanza", "")
+        es_camion = "camion" in tipo.lower()
+        div_min   = float(b.get("div_min", 1) or 1)
+        apoyos_db = int(b.get("apoyos") or 4) if b.get("apoyos") else 4
+
+        # ── 3. INFORME DE SERVICIO ────────────────────────────────────────────────────
+        st.header("3. Informe de Servicio")
+        resumen_falla       = st.text_area("Resumen de la Falla", value="Control de peso", height=80)
+        trabajos_realizados = st.text_area("Trabajos Realizados", value="Limpieza y control", height=80)
+        resultado_servicio  = st.text_area("Resultado / Recomendaciones",
+                                           value="La balanza se encuentra operativa.", height=60)
+
+        # ── 4. INFORME DE ENSAYO ──────────────────────────────────────────────────────
+        st.header("4. Informe de Ensayo")
+        hacer_ensayo = st.checkbox("¿Se realizaron ensayos? (genera Informe de Ensayo)", value=True)
+
+        if hacer_ensayo:
+
+            # ── 4a. PESAS Y CARGA ────────────────────────────────────────────────────
+            st.subheader("Pesas y Carga de Ensayo")
+
+            wc = get_weight_config(tipo, cap_max)
+
+            if wc["user_chooses_load"]:
+                carga_elegida = st.number_input(
+                    "Carga máxima de ensayo (kg)",
+                    min_value=int(wc["pesa_kg"]),
+                    max_value=int(cap_max),
+                    value=int(wc["carga_max_kg"]),
+                    step=20 if es_camion else int(wc["pesa_kg"]),
+                )
+                wc = get_weight_config(tipo, cap_max, carga_elegida_kg=carga_elegida)
+
+            col_p1, col_p2, col_p3 = st.columns(3)
+            col_p1.metric("Pesa unitaria", f"{wc['pesa_kg']} kg")
+            col_p2.metric("Carga máxima ensayo", f"{wc['carga_max_kg']} kg")
+            col_p3.metric("Pasos de linealidad", len(wc["linealidad_cargas"]))
+
+            cfg = get_config()
+            st.markdown("**Certificados de pesas**")
+            cc1, cc2 = st.columns(2)
+            cc1.info(f"🔵 Pesas pequeñas: **{cfg.get('desc_pesas_pequenas','')}**\n\nCert. N° {cfg.get('cert_pesas_pequenas','')}")
+            cc2.info(f"🟠 Pesas grandes: **{cfg.get('desc_pesas_grandes','')}**\n\nCert. N° {cfg.get('cert_pesas_grandes','')}")
+
+            # ── 4b. TEMPERATURA Y PUESTA A CERO ─────────────────────────────────────
+            st.subheader("Temperatura y Puesta a Cero")
+            tc1, tc2, tc3 = st.columns(3)
+            with tc1:
+                temp_inicial = st.number_input("Temp. Inicial (°C)", value=20.0, step=0.1, format="%.1f")
+            with tc2:
+                temp_final   = st.number_input("Temp. Final (°C)",   value=20.0, step=0.1, format="%.1f")
+            with tc3:
+                temp_promedio = round((temp_inicial + temp_final) / 2, 2)
+                st.metric("Temp. Promedio (°C)", temp_promedio)
+            st.caption(f"PUESTA A CERO 4% CAPACIDAD MÁXIMA: **OK**")
+
+            # ── 4d. EXCENTRICIDAD ────────────────────────────────────────────────────
+            st.subheader("Excentricidad")
+
+            if es_camion:
+                exc_cfg = get_excentricidad_camiones(cap_max, apoyos_db)
+                n_posiciones_def = exc_cfg["n_posiciones"]
+                pesa_exc_def     = exc_cfg["pesa_exc_kg"]
+                st.caption(f"Balanza de camiones: {apoyos_db} apoyos → {pesa_exc_def} kg por posición")
+            else:
+                n_posiciones_def = 4
+                pesa_exc_def     = wc["excentricidad_carga"]
+
+            ec1, ec2 = st.columns(2)
+            with ec1:
+                n_posiciones = st.number_input(
+                    "N° de posiciones", min_value=1, max_value=20,
+                    value=n_posiciones_def, step=1,
+                    disabled=es_camion,
+                    key="exc_n_pos"
+                )
+            with ec2:
+                pesa_exc = st.number_input(
+                    "Peso por posición (kg)", min_value=1,
+                    value=int(pesa_exc_def), step=1,
+                    disabled=es_camion,
+                    key="exc_pesa"
+                )
+
+            _sim_ctx = f"{balanza_sel}_{cap_max}_{div_min}_{int(pesa_exc)}"
+            if st.session_state.get("_sim_ctx") != _sim_ctx:
+                for k in list(st.session_state.keys()):
+                    if k.startswith("exc_ind_") or k.startswith("lin_ind_"):
+                        del st.session_state[k]
+                st.session_state["_sim_ctx"] = _sim_ctx
+
+            _s = f"{div_min:.10f}".rstrip("0")
+            _dec = len(_s.split(".")[1]) if "." in _s else 0
+
+            def _fmt(v):
+                return f"{float(v):.{_dec}f}"
+
+            def _sim(total_kg):
+                v = float(total_kg)
+                if random.random() < 0.10:
+                    v += random.choice([-1, 1]) * div_min
+                return _fmt(v)
+
+            for i in range(1, int(n_posiciones) + 1):
+                if f"exc_ind_{i}" not in st.session_state:
+                    st.session_state[f"exc_ind_{i}"] = _sim(int(pesa_exc))
+
+            exc_filas = []
+            exc_cols = st.columns([1, 2, 2, 2, 2, 2])
+            exc_cols[0].markdown("**N°**")
+            exc_cols[1].markdown("**Posición**")
+            exc_cols[2].markdown("**Pesas (kg)**")
+            exc_cols[3].markdown("**C/AUX**")
+            exc_cols[4].markdown("**Total (kg)**")
+            exc_cols[5].markdown("**Indicador (kg)**")
+
+            for i in range(1, int(n_posiciones) + 1):
+                row_cols = st.columns([1, 2, 2, 2, 2, 2])
+                row_cols[0].write(str(i))
+                posicion      = row_cols[1].text_input("", value=str(i),         key=f"exc_pos_{i}",   label_visibility="collapsed")
+                pesas_val     = row_cols[2].text_input("", value=_fmt(pesa_exc), key=f"exc_pesas_{i}", label_visibility="collapsed")
+                c_aux_val     = row_cols[3].text_input("", value="",             key=f"exc_caux_{i}",  label_visibility="collapsed")
+                total_val     = row_cols[4].text_input("", value=_fmt(pesa_exc), key=f"exc_total_{i}", label_visibility="collapsed")
+                indicador_val = row_cols[5].text_input("", value="",             key=f"exc_ind_{i}",   label_visibility="collapsed")
+                exc_filas.append({
+                    "n": i, "posicion": posicion, "pesas": pesas_val,
+                    "c_aux": c_aux_val, "total": total_val, "indicador": indicador_val,
+                })
+
+            # ── 4e. LINEALIDAD ───────────────────────────────────────────────────────
+            st.subheader("Linealidad")
+
+            if es_camion:
+                cap_min_db = int(float(b.get("cap_min") or 1000))
+                st.caption("Fase 1: pesas propias desde cap. mínima en pasos de 2000 kg hasta 20.000 kg. "
+                           "Fase 2: carga sustituta (camión vacío + autoelevador) + pesas en pasos de 4.000 kg.")
+                lc1, lc2, lc3 = st.columns(3)
+                with lc1:
+                    cap_min_lin = st.number_input("Cap. mínima fase 1 (kg)", value=cap_min_db, step=20, min_value=20)
+                with lc2:
+                    carga_sust  = st.number_input("Carga sustituta (kg)", value=19600, step=20, min_value=20)
+                with lc3:
+                    pesas_disp  = st.number_input("Pesas disponibles (kg)", value=20000, step=20, min_value=20)
+
+                fase1 = list(range(int(cap_min_lin), 20001, 2000))
+                if fase1[-1] < 20000:
+                    fase1.append(20000)
+                fase2_pesas = list(range(0, int(pesas_disp) + 1, 4000))[1:]
+                fase2_rows  = [(0, int(carga_sust))] + [(p, int(carga_sust) + p) for p in fase2_pesas]
+
+                lin_rows_def = []
+                for p in fase1:
+                    lin_rows_def.append({"pesas": p, "c_aux": "", "total": p})
+                for pesas, total in fase2_rows:
+                    lin_rows_def.append({"pesas": pesas, "c_aux": int(carga_sust), "total": total})
+
+            else:
+                carga_max_def = int(wc["carga_max_kg"])
+                pesa_step     = int(wc["pesa_kg"])
+                carga_max_lin = st.number_input(
+                    "Carga máxima de linealidad (kg)",
+                    value=carga_max_def, step=pesa_step, min_value=pesa_step,
+                )
+                n_pasos = max(1, round(carga_max_lin / pesa_step))
+                lin_rows_def = [{"pesas": pesa_step * i, "c_aux": "", "total": pesa_step * i}
+                                for i in range(1, n_pasos + 1)]
+
+            for i, r in enumerate(lin_rows_def, start=1):
+                if f"lin_ind_{i}" not in st.session_state:
+                    st.session_state[f"lin_ind_{i}"] = _sim(r["total"])
+
+            lin_filas = []
+            lin_cols = st.columns([1, 2, 2, 2, 2, 2])
+            lin_cols[0].markdown("**N°**")
+            lin_cols[1].markdown("**Posición**")
+            lin_cols[2].markdown("**Pesas (kg)**")
+            lin_cols[3].markdown("**C/AUX**")
+            lin_cols[4].markdown("**Total (kg)**")
+            lin_cols[5].markdown("**Indicador (kg)**")
+
+            for i, r in enumerate(lin_rows_def, start=1):
+                row_cols = st.columns([1, 2, 2, 2, 2, 2])
+                row_cols[0].write(str(i))
+                posicion      = row_cols[1].text_input("", value=f"1-{apoyos_db}", key=f"lin_pos_{i}",   label_visibility="collapsed")
+                pesas_val     = row_cols[2].text_input("", value=_fmt(r["pesas"]),                            key=f"lin_pesas_{i}", label_visibility="collapsed")
+                c_aux_val     = row_cols[3].text_input("", value=_fmt(r["c_aux"]) if r["c_aux"] != "" else "", key=f"lin_caux_{i}", label_visibility="collapsed")
+                total_val     = row_cols[4].text_input("", value=_fmt(r["total"]),                            key=f"lin_total_{i}", label_visibility="collapsed")
+                indicador_val = row_cols[5].text_input("", value="",                key=f"lin_ind_{i}",   label_visibility="collapsed")
+                lin_filas.append({
+                    "n": i, "posicion": posicion, "pesas": pesas_val,
+                    "c_aux": c_aux_val, "total": total_val, "indicador": indicador_val,
+                })
+
+            # ── 4f. MOVILIDAD ────────────────────────────────────────────────────────
+            if es_camion:
+                st.subheader("Movilidad")
+                sobrecarga_camion_kg = round(1.4 * div_min, 2)
+                carga_min_mov = int(cap_min_lin)
+                carga_int_mov = 20000
+                carga_max_mov = int(carga_sust) + int(pesas_disp)
+
+                st.caption(f"Sobrecarga = 1,4 × div. mín ({div_min} kg) = **{sobrecarga_camion_kg} kg**")
+                mov_cols = st.columns([2, 2, 2, 2, 2])
+                mov_cols[0].markdown("**Punto**")
+                mov_cols[1].markdown("**Carga aplicada (kg)**")
+                mov_cols[2].markdown("**Indicación (kg)**")
+                mov_cols[3].markdown("**Sobrecarga (kg)**")
+                mov_cols[4].markdown("**Indicación 2 (kg)**")
+
+                movilidad_camion = []
+                for label, carga_def in [("Carga mínima", carga_min_mov),
+                                          ("Carga intermedia", carga_int_mov),
+                                          ("Carga máxima", carga_max_mov)]:
+                    rc = st.columns([2, 2, 2, 2, 2])
+                    rc[0].write(label)
+                    carga_v = rc[1].text_input("", value=str(carga_def),            key=f"mov_{label}_c",  label_visibility="collapsed")
+                    ind_v   = rc[2].text_input("", value=str(carga_def),            key=f"mov_{label}_i",  label_visibility="collapsed")
+                    sc_v    = rc[3].text_input("", value=str(sobrecarga_camion_kg), key=f"mov_{label}_s",  label_visibility="collapsed")
+                    ind2_v  = rc[4].text_input("", value=str(round(carga_def + div_min, 2)), key=f"mov_{label}_i2", label_visibility="collapsed")
+                    movilidad_camion.append({
+                        "label": label, "carga": carga_v, "indicacion": ind_v,
+                        "sobrecarga": sc_v, "indicacion2": ind2_v,
+                    })
+                movilidad_data = {"tipo": "camion", "filas": movilidad_camion}
+            else:
+                movilidad_data = {"tipo": "ninguna"}
+
+            # ── 4g. RESULTADO DEL ENSAYO ─────────────────────────────────────────────
+            st.subheader("Resultado del Ensayo")
+            resultado = st.selectbox("Resultado del ensayo", [
+                "LA BALANZA ENCUADRA DENTRO DE NORMAS METROLÓGICAS VIGENTES",
+                "LA BALANZA NO ENCUADRA DENTRO DE NORMAS METROLÓGICAS VIGENTES",
+            ])
+            observaciones = st.text_area("Observaciones del ensayo", value="", height=60)
+
+        else:
+            resultado = ""
+            observaciones = ""
+            wc  = get_weight_config(b.get("tipo_balanza", ""), float(b.get("cap_max", 100) or 100)) if b else None
+            cfg = get_config()
+
+        # ── GENERAR ───────────────────────────────────────────────────────────────────
+        st.divider()
+        _bottom_generate = st.button("📄 Generar documentos", type="primary",
+                                      use_container_width=True, key="gen_bottom")
+        if _top_generate or _bottom_generate:
+            balanza_para_pdf = dict(b)
+            balanza_para_pdf["precintos_ant_plataforma"] = b["precintos_vig_plataforma"] if plat_cambio else ""
+            balanza_para_pdf["precintos_vig_plataforma"] = nuevo_vig_plataforma
+            balanza_para_pdf["precintos_ant_indicador"]  = b["precintos_vig_indicador"] if ind_cambio else ""
+            balanza_para_pdf["precintos_vig_indicador"]  = nuevo_vig_indicador
+
+            datos_base = {
+                "fecha":    fecha.strftime("%d/%m/%Y"),
+                "cliente":  cliente_info,
+                "balanza":  balanza_para_pdf,
+            }
+
+            try:
+                is_data = {
+                    **datos_base,
+                    "nro_is":              int(nro_is),
+                    "resumen_falla":       resumen_falla,
+                    "trabajos_realizados": trabajos_realizados,
+                    "resultado_servicio":  resultado_servicio,
+                    "nro_if":              int(nro_if) if hacer_ensayo else None,
+                }
+                is_bytes = generate_informe_servicio(is_data)
+                save_number(int(nro_is), "IS")
+
+                if hacer_ensayo:
+                    if_data = {
+                        **datos_base,
+                        "nro_informe":         int(nro_if),
+                        "pesa_kg":             wc["pesa_kg"],
+                        "cert_pesas_pequenas": cfg.get("cert_pesas_pequenas", ""),
+                        "desc_pesas_pequenas": cfg.get("desc_pesas_pequenas", ""),
+                        "cert_pesas_grandes":  cfg.get("cert_pesas_grandes", ""),
+                        "desc_pesas_grandes":  cfg.get("desc_pesas_grandes", ""),
+                        "excentricidad_carga": _fmt(pesa_exc),
+                        "div_min":             div_min,
+                        "carga_max_kg":        wc["carga_max_kg"],
+                        "excentricidad_filas": exc_filas,
+                        "linealidad_filas":    lin_filas,
+                        "movilidad":           movilidad_data,
+                        "temp_inicial":        temp_inicial,
+                        "temp_final":          temp_final,
+                        "temp_promedio":       temp_promedio,
+                        "resultado":           resultado,
+                        "observaciones":       observaciones,
+                    }
+                    if_bytes = generate_pdf(if_data)
+                    save_number(int(nro_if), "IF")
+
+                if precintos_cambiados:
+                    update_precintos(
+                        balanza_sel,
+                        nuevo_vig_plataforma, nuevo_vig_indicador,
+                        plat_cambio=plat_cambio, ind_cambio=ind_cambio,
+                    )
+
+                msg = "✅ Documentos generados."
+                if precintos_cambiados:
+                    msg += " Precintos actualizados en la base de datos."
+                st.success(msg)
+
+                st.session_state["docs_is_bytes"]     = is_bytes
+                st.session_state["docs_is_name"]      = f"IS-01-{nro_is:04d}_{balanza_sel}.pdf"
+                st.session_state["docs_if_bytes"]     = if_bytes if hacer_ensayo else None
+                st.session_state["docs_if_name"]      = f"IF-01-{nro_if:04d}_{balanza_sel}.pdf" if hacer_ensayo else None
+                st.session_state["docs_hacer_ensayo"] = hacer_ensayo
+                st.rerun()
+
+            except Exception as e:
+                st.error(f"Error al generar documentos: {e}")
+                raise
+
+        # ── DESCARGAS (persisten tras el clic) ───────────────────────────────────────
+        if "docs_is_bytes" in st.session_state:
+            col_d1, col_d2 = st.columns(2)
+            with col_d1:
+                st.download_button(
+                    label="⬇️ Descargar Informe de Servicio",
+                    data=st.session_state["docs_is_bytes"],
+                    file_name=st.session_state["docs_is_name"],
+                    mime="application/pdf",
+                    key="dl_is",
+                )
+            if st.session_state.get("docs_hacer_ensayo") and st.session_state.get("docs_if_bytes"):
+                with col_d2:
+                    st.download_button(
+                        label="⬇️ Descargar Informe de Ensayo",
+                        data=st.session_state["docs_if_bytes"],
+                        file_name=st.session_state["docs_if_name"],
+                        mime="application/pdf",
+                        key="dl_if",
+                    )
+
 # ── GESTIÓN DE BASE DE DATOS ──────────────────────────────────────────────────
 st.divider()
 st.header("🗄️ Base de Datos")
@@ -311,407 +717,3 @@ with st.expander("✏️ Modificar Balanza"):
                     })
                     st.success(f"Balanza '{eb_cod.strip()}' actualizada.")
                     st.rerun()
-
-st.divider()
-
-# ── 2. CLIENTE Y BALANZA ─────────────────────────────────────────────────────
-st.header("2. Cliente y Balanza")
-clientes = get_clientes()
-if not clientes:
-    st.warning("No hay clientes cargados aún. Usá la sección 'Base de Datos' de arriba para agregar.")
-    st.stop()
-
-cliente_sel = st.selectbox("Cliente", clientes)
-cliente_info = get_cliente_info(cliente_sel)
-
-st.write(f"**Dirección:** {cliente_info.get('direccion', '')}  |  **Localidad:** {cliente_info.get('localidad', '')}")
-
-balanzas = get_balanzas_de_cliente(cliente_sel)
-if not balanzas:
-    st.warning("Este cliente no tiene balanzas en la base de datos.")
-    st.stop()
-
-balanza_sel = st.selectbox("Balanza (Código interno)", balanzas)
-b = get_balanza_info(balanza_sel)
-
-if b:
-    col_b1, col_b2, col_b3, col_b4 = st.columns(4)
-    col_b1.metric("Tipo", b["tipo_balanza"])
-    col_b2.metric("Cap. Máx", f"{b['cap_max']} kg")
-    col_b3.metric("Div. Mín", f"{b['div_min']} kg")
-    col_b4.metric("Ult. Verificación", b["ult_verificacion"] or "—")
-
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("**Indicador**")
-        st.write(f"Marca: {b['marca']}  |  Modelo: {b['mod_indicador']}  |  "
-                 f"N° Serie: {b['n_serie_indicador']}  |  Cod. Aprob.: {b['cod_aprobacion_indicador']}")
-    with c2:
-        st.markdown("**Plataforma**")
-        st.write(f"Tipo: {b['plataforma']}  |  Medidas: {b['medidas']}  |  "
-                 f"N° Serie: {b['n_serie_plataforma']}  |  Cod. Aprob.: {b['cod_aprobacion_plataforma']}")
-
-    st.write(f"**Ubicación:** {b['ubicacion']}  |  **Cod. Interno:** {b['cod_interno']}")
-
-    st.markdown("**Precintos**")
-    st.caption("Si se reemplazaron precintos, editá los valores nuevos. Al generar el PDF se actualizará la base de datos automáticamente.")
-    pc1, pc2 = st.columns(2)
-    with pc1:
-        st.markdown("*Parte base del Instrumento*")
-        nuevo_vig_plataforma = st.text_input(
-            "Precintos vigentes (plataforma)",
-            value=b["precintos_vig_plataforma"],
-            key="prec_vig_plat"
-        )
-    with pc2:
-        st.markdown("*Indicador Electrónico*")
-        nuevo_vig_indicador = st.text_input(
-            "Precintos vigentes (indicador)",
-            value=b["precintos_vig_indicador"],
-            key="prec_vig_ind"
-        )
-
-    plat_cambio = nuevo_vig_plataforma.strip() != b["precintos_vig_plataforma"].strip()
-    ind_cambio  = nuevo_vig_indicador.strip()  != b["precintos_vig_indicador"].strip()
-    precintos_cambiados = plat_cambio or ind_cambio
-    if precintos_cambiados:
-        st.warning("⚠️ Los precintos fueron modificados. Al generar el PDF se actualizará la base de datos.")
-
-    cap_max   = float(b.get("cap_max", 100) or 100)
-    tipo      = b.get("tipo_balanza", "")
-    es_camion = "camion" in tipo.lower()
-    div_min   = float(b.get("div_min", 1) or 1)
-    apoyos_db = int(b.get("apoyos") or 4) if b.get("apoyos") else 4
-
-# ── 3. INFORME DE SERVICIO ────────────────────────────────────────────────────
-st.header("3. Informe de Servicio")
-resumen_falla       = st.text_area("Resumen de la Falla", value="Control de peso", height=80)
-trabajos_realizados = st.text_area("Trabajos Realizados", value="Limpieza y control", height=80)
-resultado_servicio  = st.text_area("Resultado / Recomendaciones",
-                                   value="La balanza se encuentra operativa.", height=60)
-
-# ── 4. INFORME DE ENSAYO ──────────────────────────────────────────────────────
-st.header("4. Informe de Ensayo")
-hacer_ensayo = st.checkbox("¿Se realizaron ensayos? (genera Informe de Ensayo)", value=True)
-
-if hacer_ensayo:
-
-    # ── 4a. PESAS Y CARGA ────────────────────────────────────────────────────
-    st.subheader("Pesas y Carga de Ensayo")
-
-    wc = get_weight_config(tipo, cap_max)
-
-    if wc["user_chooses_load"]:
-        carga_elegida = st.number_input(
-            "Carga máxima de ensayo (kg)",
-            min_value=int(wc["pesa_kg"]),
-            max_value=int(cap_max),
-            value=int(wc["carga_max_kg"]),
-            step=20 if es_camion else int(wc["pesa_kg"]),
-        )
-        wc = get_weight_config(tipo, cap_max, carga_elegida_kg=carga_elegida)
-
-    col_p1, col_p2, col_p3 = st.columns(3)
-    col_p1.metric("Pesa unitaria", f"{wc['pesa_kg']} kg")
-    col_p2.metric("Carga máxima ensayo", f"{wc['carga_max_kg']} kg")
-    col_p3.metric("Pasos de linealidad", len(wc["linealidad_cargas"]))
-
-    cfg = get_config()
-    st.markdown("**Certificados de pesas**")
-    cc1, cc2 = st.columns(2)
-    cc1.info(f"🔵 Pesas pequeñas: **{cfg.get('desc_pesas_pequenas','')}**\n\nCert. N° {cfg.get('cert_pesas_pequenas','')}")
-    cc2.info(f"🟠 Pesas grandes: **{cfg.get('desc_pesas_grandes','')}**\n\nCert. N° {cfg.get('cert_pesas_grandes','')}")
-
-    # ── 4b. TEMPERATURA Y PUESTA A CERO ─────────────────────────────────────
-    st.subheader("Temperatura y Puesta a Cero")
-    tc1, tc2, tc3 = st.columns(3)
-    with tc1:
-        temp_inicial = st.number_input("Temp. Inicial (°C)", value=20.0, step=0.1, format="%.1f")
-    with tc2:
-        temp_final   = st.number_input("Temp. Final (°C)",   value=20.0, step=0.1, format="%.1f")
-    with tc3:
-        temp_promedio = round((temp_inicial + temp_final) / 2, 2)
-        st.metric("Temp. Promedio (°C)", temp_promedio)
-    st.caption(f"PUESTA A CERO 4% CAPACIDAD MÁXIMA: **OK**")
-
-    # ── 4d. EXCENTRICIDAD ────────────────────────────────────────────────────
-    st.subheader("Excentricidad")
-
-    if es_camion:
-        exc_cfg = get_excentricidad_camiones(cap_max, apoyos_db)
-        n_posiciones_def = exc_cfg["n_posiciones"]
-        pesa_exc_def     = exc_cfg["pesa_exc_kg"]
-        st.caption(f"Balanza de camiones: {apoyos_db} apoyos → {pesa_exc_def} kg por posición")
-    else:
-        n_posiciones_def = 4
-        pesa_exc_def     = wc["excentricidad_carga"]
-
-    ec1, ec2 = st.columns(2)
-    with ec1:
-        n_posiciones = st.number_input(
-            "N° de posiciones", min_value=1, max_value=20,
-            value=n_posiciones_def, step=1,
-            disabled=es_camion,
-            key="exc_n_pos"
-        )
-    with ec2:
-        pesa_exc = st.number_input(
-            "Peso por posición (kg)", min_value=1,
-            value=int(pesa_exc_def), step=1,
-            disabled=es_camion,
-            key="exc_pesa"
-        )
-
-    _sim_ctx = f"{balanza_sel}_{cap_max}_{div_min}_{int(pesa_exc)}"
-    if st.session_state.get("_sim_ctx") != _sim_ctx:
-        for k in list(st.session_state.keys()):
-            if k.startswith("exc_ind_") or k.startswith("lin_ind_"):
-                del st.session_state[k]
-        st.session_state["_sim_ctx"] = _sim_ctx
-
-    _s = f"{div_min:.10f}".rstrip("0")
-    _dec = len(_s.split(".")[1]) if "." in _s else 0
-
-    def _fmt(v):
-        return f"{float(v):.{_dec}f}"
-
-    def _sim(total_kg):
-        v = float(total_kg)
-        if random.random() < 0.10:
-            v += random.choice([-1, 1]) * div_min
-        return _fmt(v)
-
-    for i in range(1, int(n_posiciones) + 1):
-        if f"exc_ind_{i}" not in st.session_state:
-            st.session_state[f"exc_ind_{i}"] = _sim(int(pesa_exc))
-
-    exc_filas = []
-    exc_cols = st.columns([1, 2, 2, 2, 2, 2])
-    exc_cols[0].markdown("**N°**")
-    exc_cols[1].markdown("**Posición**")
-    exc_cols[2].markdown("**Pesas (kg)**")
-    exc_cols[3].markdown("**C/AUX**")
-    exc_cols[4].markdown("**Total (kg)**")
-    exc_cols[5].markdown("**Indicador (kg)**")
-
-    for i in range(1, int(n_posiciones) + 1):
-        row_cols = st.columns([1, 2, 2, 2, 2, 2])
-        row_cols[0].write(str(i))
-        posicion      = row_cols[1].text_input("", value=str(i),         key=f"exc_pos_{i}",   label_visibility="collapsed")
-        pesas_val     = row_cols[2].text_input("", value=_fmt(pesa_exc), key=f"exc_pesas_{i}", label_visibility="collapsed")
-        c_aux_val     = row_cols[3].text_input("", value="",             key=f"exc_caux_{i}",  label_visibility="collapsed")
-        total_val     = row_cols[4].text_input("", value=_fmt(pesa_exc), key=f"exc_total_{i}", label_visibility="collapsed")
-        indicador_val = row_cols[5].text_input("", value="",             key=f"exc_ind_{i}",   label_visibility="collapsed")
-        exc_filas.append({
-            "n": i, "posicion": posicion, "pesas": pesas_val,
-            "c_aux": c_aux_val, "total": total_val, "indicador": indicador_val,
-        })
-
-    # ── 4e. LINEALIDAD ───────────────────────────────────────────────────────
-    st.subheader("Linealidad")
-
-    if es_camion:
-        cap_min_db = int(float(b.get("cap_min") or 1000))
-        st.caption("Fase 1: pesas propias desde cap. mínima en pasos de 2000 kg hasta 20.000 kg. "
-                   "Fase 2: carga sustituta (camión vacío + autoelevador) + pesas en pasos de 4.000 kg.")
-        lc1, lc2, lc3 = st.columns(3)
-        with lc1:
-            cap_min_lin = st.number_input("Cap. mínima fase 1 (kg)", value=cap_min_db, step=20, min_value=20)
-        with lc2:
-            carga_sust  = st.number_input("Carga sustituta (kg)", value=19600, step=20, min_value=20)
-        with lc3:
-            pesas_disp  = st.number_input("Pesas disponibles (kg)", value=20000, step=20, min_value=20)
-
-        fase1 = list(range(int(cap_min_lin), 20001, 2000))
-        if fase1[-1] < 20000:
-            fase1.append(20000)
-        fase2_pesas = list(range(0, int(pesas_disp) + 1, 4000))[1:]
-        fase2_rows  = [(0, int(carga_sust))] + [(p, int(carga_sust) + p) for p in fase2_pesas]
-
-        lin_rows_def = []
-        for p in fase1:
-            lin_rows_def.append({"pesas": p, "c_aux": "", "total": p})
-        for pesas, total in fase2_rows:
-            lin_rows_def.append({"pesas": pesas, "c_aux": int(carga_sust), "total": total})
-
-    else:
-        carga_max_def = int(wc["carga_max_kg"])
-        pesa_step     = int(wc["pesa_kg"])
-        carga_max_lin = st.number_input(
-            "Carga máxima de linealidad (kg)",
-            value=carga_max_def, step=pesa_step, min_value=pesa_step,
-        )
-        n_pasos = max(1, round(carga_max_lin / pesa_step))
-        lin_rows_def = [{"pesas": pesa_step * i, "c_aux": "", "total": pesa_step * i}
-                        for i in range(1, n_pasos + 1)]
-
-    for i, r in enumerate(lin_rows_def, start=1):
-        if f"lin_ind_{i}" not in st.session_state:
-            st.session_state[f"lin_ind_{i}"] = _sim(r["total"])
-
-    lin_filas = []
-    lin_cols = st.columns([1, 2, 2, 2, 2, 2])
-    lin_cols[0].markdown("**N°**")
-    lin_cols[1].markdown("**Posición**")
-    lin_cols[2].markdown("**Pesas (kg)**")
-    lin_cols[3].markdown("**C/AUX**")
-    lin_cols[4].markdown("**Total (kg)**")
-    lin_cols[5].markdown("**Indicador (kg)**")
-
-    for i, r in enumerate(lin_rows_def, start=1):
-        row_cols = st.columns([1, 2, 2, 2, 2, 2])
-        row_cols[0].write(str(i))
-        posicion      = row_cols[1].text_input("", value=f"1-{apoyos_db}", key=f"lin_pos_{i}",   label_visibility="collapsed")
-        pesas_val     = row_cols[2].text_input("", value=_fmt(r["pesas"]),                            key=f"lin_pesas_{i}", label_visibility="collapsed")
-        c_aux_val     = row_cols[3].text_input("", value=_fmt(r["c_aux"]) if r["c_aux"] != "" else "", key=f"lin_caux_{i}", label_visibility="collapsed")
-        total_val     = row_cols[4].text_input("", value=_fmt(r["total"]),                            key=f"lin_total_{i}", label_visibility="collapsed")
-        indicador_val = row_cols[5].text_input("", value="",                key=f"lin_ind_{i}",   label_visibility="collapsed")
-        lin_filas.append({
-            "n": i, "posicion": posicion, "pesas": pesas_val,
-            "c_aux": c_aux_val, "total": total_val, "indicador": indicador_val,
-        })
-
-    # ── 4f. MOVILIDAD ────────────────────────────────────────────────────────
-    if es_camion:
-        st.subheader("Movilidad")
-        sobrecarga_camion_kg = round(1.4 * div_min, 2)
-        carga_min_mov = int(cap_min_lin)
-        carga_int_mov = 20000
-        carga_max_mov = int(carga_sust) + int(pesas_disp)
-
-        st.caption(f"Sobrecarga = 1,4 × div. mín ({div_min} kg) = **{sobrecarga_camion_kg} kg**")
-        mov_cols = st.columns([2, 2, 2, 2, 2])
-        mov_cols[0].markdown("**Punto**")
-        mov_cols[1].markdown("**Carga aplicada (kg)**")
-        mov_cols[2].markdown("**Indicación (kg)**")
-        mov_cols[3].markdown("**Sobrecarga (kg)**")
-        mov_cols[4].markdown("**Indicación 2 (kg)**")
-
-        movilidad_camion = []
-        for label, carga_def in [("Carga mínima", carga_min_mov),
-                                  ("Carga intermedia", carga_int_mov),
-                                  ("Carga máxima", carga_max_mov)]:
-            rc = st.columns([2, 2, 2, 2, 2])
-            rc[0].write(label)
-            carga_v = rc[1].text_input("", value=str(carga_def),            key=f"mov_{label}_c",  label_visibility="collapsed")
-            ind_v   = rc[2].text_input("", value=str(carga_def),            key=f"mov_{label}_i",  label_visibility="collapsed")
-            sc_v    = rc[3].text_input("", value=str(sobrecarga_camion_kg), key=f"mov_{label}_s",  label_visibility="collapsed")
-            ind2_v  = rc[4].text_input("", value=str(round(carga_def + div_min, 2)), key=f"mov_{label}_i2", label_visibility="collapsed")
-            movilidad_camion.append({
-                "label": label, "carga": carga_v, "indicacion": ind_v,
-                "sobrecarga": sc_v, "indicacion2": ind2_v,
-            })
-        movilidad_data = {"tipo": "camion", "filas": movilidad_camion}
-    else:
-        movilidad_data = {"tipo": "ninguna"}
-
-    # ── 4g. RESULTADO DEL ENSAYO ─────────────────────────────────────────────
-    st.subheader("Resultado del Ensayo")
-    resultado = st.selectbox("Resultado del ensayo", [
-        "LA BALANZA ENCUADRA DENTRO DE NORMAS METROLÓGICAS VIGENTES",
-        "LA BALANZA NO ENCUADRA DENTRO DE NORMAS METROLÓGICAS VIGENTES",
-    ])
-    observaciones = st.text_area("Observaciones del ensayo", value="", height=60)
-
-else:
-    resultado = ""
-    observaciones = ""
-    wc  = get_weight_config(b.get("tipo_balanza", ""), float(b.get("cap_max", 100) or 100)) if b else None
-    cfg = get_config()
-
-# ── GENERAR ───────────────────────────────────────────────────────────────────
-st.divider()
-_bottom_generate = st.button("📄 Generar documentos", type="primary",
-                              use_container_width=True, key="gen_bottom")
-if _top_generate or _bottom_generate:
-    balanza_para_pdf = dict(b)
-    balanza_para_pdf["precintos_ant_plataforma"] = b["precintos_vig_plataforma"] if plat_cambio else ""
-    balanza_para_pdf["precintos_vig_plataforma"] = nuevo_vig_plataforma
-    balanza_para_pdf["precintos_ant_indicador"]  = b["precintos_vig_indicador"] if ind_cambio else ""
-    balanza_para_pdf["precintos_vig_indicador"]  = nuevo_vig_indicador
-
-    datos_base = {
-        "fecha":    fecha.strftime("%d/%m/%Y"),
-        "cliente":  cliente_info,
-        "balanza":  balanza_para_pdf,
-    }
-
-    try:
-        is_data = {
-            **datos_base,
-            "nro_is":              int(nro_is),
-            "resumen_falla":       resumen_falla,
-            "trabajos_realizados": trabajos_realizados,
-            "resultado_servicio":  resultado_servicio,
-            "nro_if":              int(nro_if) if hacer_ensayo else None,
-        }
-        is_bytes = generate_informe_servicio(is_data)
-        save_number(int(nro_is), "IS")
-
-        if hacer_ensayo:
-            if_data = {
-                **datos_base,
-                "nro_informe":         int(nro_if),
-                "pesa_kg":             wc["pesa_kg"],
-                "cert_pesas_pequenas": cfg.get("cert_pesas_pequenas", ""),
-                "desc_pesas_pequenas": cfg.get("desc_pesas_pequenas", ""),
-                "cert_pesas_grandes":  cfg.get("cert_pesas_grandes", ""),
-                "desc_pesas_grandes":  cfg.get("desc_pesas_grandes", ""),
-                "excentricidad_carga": _fmt(pesa_exc),
-                "div_min":             div_min,
-                "carga_max_kg":        wc["carga_max_kg"],
-                "excentricidad_filas": exc_filas,
-                "linealidad_filas":    lin_filas,
-                "movilidad":           movilidad_data,
-                "temp_inicial":        temp_inicial,
-                "temp_final":          temp_final,
-                "temp_promedio":       temp_promedio,
-                "resultado":           resultado,
-                "observaciones":       observaciones,
-            }
-            if_bytes = generate_pdf(if_data)
-            save_number(int(nro_if), "IF")
-
-        if precintos_cambiados:
-            update_precintos(
-                balanza_sel,
-                nuevo_vig_plataforma, nuevo_vig_indicador,
-                plat_cambio=plat_cambio, ind_cambio=ind_cambio,
-            )
-
-        msg = "✅ Documentos generados."
-        if precintos_cambiados:
-            msg += " Precintos actualizados en la base de datos."
-        st.success(msg)
-
-        st.session_state["docs_is_bytes"]     = is_bytes
-        st.session_state["docs_is_name"]      = f"IS-01-{nro_is:04d}_{balanza_sel}.pdf"
-        st.session_state["docs_if_bytes"]     = if_bytes if hacer_ensayo else None
-        st.session_state["docs_if_name"]      = f"IF-01-{nro_if:04d}_{balanza_sel}.pdf" if hacer_ensayo else None
-        st.session_state["docs_hacer_ensayo"] = hacer_ensayo
-        st.rerun()
-
-    except Exception as e:
-        st.error(f"Error al generar documentos: {e}")
-        raise
-
-# ── DESCARGAS (persisten tras el clic) ───────────────────────────────────────
-if "docs_is_bytes" in st.session_state:
-    col_d1, col_d2 = st.columns(2)
-    with col_d1:
-        st.download_button(
-            label="⬇️ Descargar Informe de Servicio",
-            data=st.session_state["docs_is_bytes"],
-            file_name=st.session_state["docs_is_name"],
-            mime="application/pdf",
-            key="dl_is",
-        )
-    if st.session_state.get("docs_hacer_ensayo") and st.session_state.get("docs_if_bytes"):
-        with col_d2:
-            st.download_button(
-                label="⬇️ Descargar Informe de Ensayo",
-                data=st.session_state["docs_if_bytes"],
-                file_name=st.session_state["docs_if_name"],
-                mime="application/pdf",
-                key="dl_if",
-            )
