@@ -93,6 +93,8 @@ if not clientes:
     st.warning("No hay clientes cargados aún. Usá la sección 'Base de Datos' al final para agregar.")
 
 cliente_sel = st.selectbox("Cliente", clientes) if clientes else None
+if not cliente_sel:
+    st.stop()
 cliente_info = get_cliente_info(cliente_sel)
 
 st.write(f"**Dirección:** {cliente_info.get('direccion', '')}  |  **Localidad:** {cliente_info.get('localidad', '')}")
