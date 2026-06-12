@@ -66,6 +66,7 @@ def update_cliente(key_original: str, razon_social: str, direccion: str, localid
     if loc_orig:
         q = q.eq("localidad", loc_orig)
     q.execute()
+    # Propagar cambio de razón social a balanzas
     if rs_orig != razon_social.strip():
         uq = _client().table("balanzas").update({"razon_social": razon_social.strip()}).eq("razon_social", rs_orig)
         if loc_orig:
@@ -111,6 +112,7 @@ def get_balanza_info(cod_interno: str) -> dict:
         "precintos_ant_indicador":   r.get("precintos_ant_indicador", ""),
         "precintos_vig_indicador":   r.get("precintos_vig_indicador", ""),
         "localidad_cliente":         r.get("localidad_cliente", ""),
+        # alias legacy
         "n_serie":        r.get("n_serie_indicador", ""),
         "cod_aprobacion": r.get("cod_aprobacion_indicador", ""),
     }
