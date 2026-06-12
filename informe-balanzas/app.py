@@ -691,12 +691,12 @@ with st.expander("✏️ Modificar Balanza"):
                 efpr1, efpr2 = st.columns(2)
                 with efpr1:
                     st.caption("Plataforma")
-                    eb_prec_ant_plat = st.text_input("Anteriores plataforma", value=eb.get("precintos_ant_plataforma", ""), key="eb_prec_ant_plat")
-                    eb_prec_vig_plat = st.text_input("Vigentes plataforma",   value=eb.get("precintos_vig_plataforma", ""), key="eb_prec_vig_plat")
+                    eb_prec_ant_plat = st.text_input("Anteriores plataforma", value=eb.get("precintos_ant_plataforma", ""), key=f"eb_prec_ant_plat_{eb_sel}")
+                    eb_prec_vig_plat = st.text_input("Vigentes plataforma",   value=eb.get("precintos_vig_plataforma", ""), key=f"eb_prec_vig_plat_{eb_sel}")
                 with efpr2:
                     st.caption("Indicador")
-                    eb_prec_ant_ind  = st.text_input("Anteriores indicador",  value=eb.get("precintos_ant_indicador", ""),  key="eb_prec_ant_ind")
-                    eb_prec_vig_ind  = st.text_input("Vigentes indicador",    value=eb.get("precintos_vig_indicador", ""),  key="eb_prec_vig_ind")
+                    eb_prec_ant_ind  = st.text_input("Anteriores indicador",  value=eb.get("precintos_ant_indicador", ""),  key=f"eb_prec_ant_ind_{eb_sel}")
+                    eb_prec_vig_ind  = st.text_input("Vigentes indicador",    value=eb.get("precintos_vig_indicador", ""),  key=f"eb_prec_vig_ind_{eb_sel}")
 
                 submitted_eb = st.form_submit_button("Guardar cambios")
 
