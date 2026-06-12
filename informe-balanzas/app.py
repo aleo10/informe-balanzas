@@ -91,17 +91,18 @@ st.header("2. Cliente y Balanza")
 clientes = get_clientes()
 if not clientes:
     st.warning("No hay clientes cargados aún. Usá la sección 'Base de Datos' al final para agregar.")
-    st.stop()
 
-cliente_sel = st.selectbox("Cliente", clientes)
+cliente_sel = st.selectbox("Cliente", clientes) if clientes else None
 cliente_info = get_cliente_info(cliente_sel)
 
 st.write(f"**Dirección:** {cliente_info.get('direccion', '')}  |  **Localidad:** {cliente_info.get('localidad', '')}")
 
-balanzas = get_balanzas_de_cliente(cliente_sel)
-if not balanzas:
-    st.warning("Este cliente no tiene balanzas en la base de datos.")
-    st.stop()
+if cliente_sel:
+    balanzas = get_balanzas_de_cliente(cliente_sel)
+    if not balanzas:
+        st.warning("Este cliente no tiene balanzas en la base de datos.")
+else:
+    balanzas = []
 
 balanza_sel = st.selectbox("Balanza (Código interno)", balanzas)
 b = get_balanza_info(balanza_sel)
