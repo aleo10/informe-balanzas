@@ -5,7 +5,7 @@ import datetime
 import streamlit as st
 
 from database import (get_clientes, get_cliente_info, get_balanzas_de_cliente, get_balanza_info,
-                       update_precintos, get_config, add_cliente, add_balanza,
+                       update_precintos, get_config, update_config, add_cliente, add_balanza,
                        update_cliente, update_balanza, parse_cliente_key)
 from weight_rules import get_weight_config, get_excentricidad_camiones
 from pdf_generator import generate_pdf, generate_informe_servicio
@@ -194,9 +194,23 @@ if _lista:
 
             cfg = get_config()
             st.markdown("**Certificados de pesas**")
-            cc1, cc2 = st.columns(2)
-            cc1.info(f"🔵 Pesas pequeñas: **{cfg.get('desc_pesas_pequenas','')}**\n\nCert. N° {cfg.get('cert_pesas_pequenas','')}")
-            cc2.info(f"🟠 Pesas grandes: **{cfg.get('desc_pesas_grandes','')}**\n\nCert. N° {cfg.get('cert_pesas_grandes','')}")
+            with st.form("form_certificados"):
+                cc1, cc2 = st.columns(2)
+                with cc1:
+                    st.caption("🔵 Pesas pequeñas")
+                    cfg_desc_peq  = st.text_input("Descripción", value=cfg.get("desc_pesas_pequenas", ""), key="cfg_desc_peq")
+                    cfg_cert_peq  = st.text_input("N° Certificado", value=cfg.get("cert_pesas_pequenas", ""), key="cfg_cert_peq")
+                with cc2:
+                    st.caption("🟠 Pesas grandes")
+                    cfg_desc_gran = st.text_input("Descripción", value=cfg.get("desc_pesas_grandes", ""), key="cfg_desc_gran")
+                    cfg_cert_gran = st.text_input("N° Certificado", value=cfg.get("cert_pesas_grandes", ""), key="cfg_cert_gran")
+                if st.form_submit_button("💾 Guardar certificados"):
+                    update_config("desc_pesas_pequenas", cfg_desc_peq)
+                    update_config("cert_pesas_pequenas", cfg_cert_peq)
+                    update_config("desc_pesas_grandes",  cfg_desc_gran)
+                    update_config("cert_pesas_grandes",  cfg_cert_gran)
+                    st.success("Certificados actualizados.")
+                    st.rerun()
 
             # ── 4b. TEMPERATURA Y PUESTA A CERO ─────────────────────────────────────
             st.subheader("Temperatura y Puesta a Cero")

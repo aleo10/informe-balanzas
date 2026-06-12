@@ -195,3 +195,7 @@ def update_precintos(cod_interno: str,
 def get_config() -> dict:
     rows = _client().table("configuracion").select("clave, valor").execute().data
     return {r["clave"]: r["valor"] for r in rows}
+
+
+def update_config(clave: str, valor: str):
+    _client().table("configuracion").upsert({"clave": clave, "valor": valor}).execute()
