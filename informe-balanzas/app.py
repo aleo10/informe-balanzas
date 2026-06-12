@@ -253,7 +253,7 @@ if _lista:
                     key="exc_pesa"
                 )
 
-_s = f"{div_min:.10f}".rstrip("0")
+            _s = f"{div_min:.10f}".rstrip("0")
             _dec = len(_s.split(".")[1]) if "." in _s else 0
 
             def _fmt(v):
