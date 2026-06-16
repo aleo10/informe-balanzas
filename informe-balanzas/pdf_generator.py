@@ -303,7 +303,7 @@ def generate_pdf(data: dict) -> bytes:
     story.append(KeepTogether([
         _section_title("RESULTADO", cw),
         _two_col_table(res_data, cw, label_ratio=0.22),
-        Spacer(1, 48),
+        Spacer(1, 28),
         firma_table,
     ]))
 
