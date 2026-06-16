@@ -78,10 +78,18 @@ def update_cliente(key_original: str, razon_social: str, direccion: str, localid
 
 def get_balanzas_de_cliente(key: str) -> list[str]:
     rs, loc = parse_cliente_key(key)
-    q = _client().table("balanzas").select("cod_interno").eq("razon_social", rs)
+    q = _client().table("balanzas").select("cod_interno, cap_max_kg").eq("razon_social", rs)
     if loc:
         q = q.eq("localidad_cliente", loc)
     rows = q.execute().data
+
+    def _cap(r):
+        try:
+            return float(r.get("cap_max_kg") or 0)
+        except (TypeError, ValueError):
+            return 0.0
+
+    rows.sort(key=lambda r: (_cap(r), r["cod_interno"]))
     return [r["cod_interno"] for r in rows]
 
 
