@@ -300,12 +300,10 @@ def generate_pdf(data: dict) -> bytes:
         ("FONTSIZE", (0, 0), (-1, -1), 8),
         ("TOPPADDING", (0, 0), (-1, -1), 2),
     ))
-    story.append(KeepTogether([
-        _section_title("RESULTADO", cw),
-        _two_col_table(res_data, cw, label_ratio=0.22),
-        Spacer(1, 28),
-        firma_table,
-    ]))
+    story.append(_section_title("RESULTADO", cw))
+    story.append(_two_col_table(res_data, cw, label_ratio=0.22))
+    story.append(Spacer(1, 36))
+    story.append(firma_table)
 
     doc.build(story, canvasmaker=_NumberedCanvas)
     return buf.getvalue()
