@@ -185,6 +185,7 @@ if _lista:
                     max_value=int(cap_max),
                     value=int(wc["carga_max_kg"]),
                     step=20 if es_camion else int(wc["pesa_kg"]),
+                    key=f"carga_elegida_{balanza_sel}",
                 )
                 wc = get_weight_config(tipo, cap_max, carga_elegida_kg=carga_elegida)
 
@@ -243,14 +244,14 @@ if _lista:
                     "N° de posiciones", min_value=1, max_value=20,
                     value=n_posiciones_def, step=1,
                     disabled=es_camion,
-                    key="exc_n_pos"
+                    key=f"exc_n_pos_{balanza_sel}"
                 )
             with ec2:
                 pesa_exc = st.number_input(
                     "Peso por posición (kg)", min_value=1,
                     value=int(pesa_exc_def), step=1,
                     disabled=es_camion,
-                    key="exc_pesa"
+                    key=f"exc_pesa_{balanza_sel}"
                 )
 
             _s = f"{div_min:.10f}".rstrip("0")
@@ -306,11 +307,11 @@ if _lista:
                            "Fase 2: carga sustituta (camión vacío + autoelevador) + pesas en pasos de 4.000 kg.")
                 lc1, lc2, lc3 = st.columns(3)
                 with lc1:
-                    cap_min_lin = st.number_input("Cap. mínima fase 1 (kg)", value=cap_min_db, step=20, min_value=20)
+                    cap_min_lin = st.number_input("Cap. mínima fase 1 (kg)", value=cap_min_db, step=20, min_value=20, key=f"cap_min_lin_{balanza_sel}")
                 with lc2:
-                    carga_sust  = st.number_input("Carga sustituta (kg)", value=19600, step=20, min_value=20)
+                    carga_sust  = st.number_input("Carga sustituta (kg)", value=19600, step=20, min_value=20, key=f"carga_sust_{balanza_sel}")
                 with lc3:
-                    pesas_disp  = st.number_input("Pesas disponibles (kg)", value=20000, step=20, min_value=20)
+                    pesas_disp  = st.number_input("Pesas disponibles (kg)", value=20000, step=20, min_value=20, key=f"pesas_disp_{balanza_sel}")
 
                 fase1 = list(range(int(cap_min_lin), 20001, 2000))
                 if fase1[-1] < 20000:
@@ -330,6 +331,7 @@ if _lista:
                 carga_max_lin = st.number_input(
                     "Carga máxima de linealidad (kg)",
                     value=carga_max_def, step=pesa_step, min_value=pesa_step,
+                    key=f"carga_max_lin_{balanza_sel}",
                 )
                 n_pasos = max(1, round(carga_max_lin / pesa_step))
                 lin_rows_def = [{"pesas": pesa_step * i, "c_aux": "", "total": pesa_step * i}
