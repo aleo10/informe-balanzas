@@ -303,7 +303,7 @@ def generate_pdf(data: dict) -> bytes:
     story.append(KeepTogether([
         _section_title("RESULTADO", cw),
         _two_col_table(res_data, cw, label_ratio=0.22),
-        Spacer(1, 14),
+        Spacer(1, 48),
         firma_table,
     ]))
 
@@ -530,7 +530,7 @@ def generate_informe_servicio(data: dict) -> bytes:
         ("FONTSIZE", (0, 0), (-1, -1), 8),
         ("TOPPADDING", (0, 0), (-1, -1), 2),
     ))
-    story.append(KeepTogether([Spacer(1, 10), firma_table]))
+    story.append(KeepTogether([Spacer(1, 48), firma_table]))
 
     doc.build(story, canvasmaker=_NumberedCanvas)
     return buf.getvalue()
