@@ -703,7 +703,8 @@ with st.expander("✏️ Modificar Balanza"):
             st.info("Este cliente no tiene balanzas.")
         else:
             eb_sel = st.selectbox("Balanza (Cód. Interno)", balanzas_eb, key="eb_sel")
-            eb = get_balanza_info(eb_sel)
+            _eb_rs_orig, _ = parse_cliente_key(eb_cliente)
+            eb = get_balanza_info(eb_sel, razon_social=_eb_rs_orig)
 
             with st.form("form_edit_balanza"):
                 st.markdown("**Cliente y tipo**")
@@ -764,7 +765,7 @@ with st.expander("✏️ Modificar Balanza"):
                 else:
                     _eb_rs, _eb_loc = parse_cliente_key(eb_cliente2)
                     try:
-                        update_balanza(eb_sel, eb.get("razon_social", ""), {
+                        update_balanza(eb_sel, _eb_rs_orig, {
                             "razon_social":              _eb_rs,
                             "localidad_cliente":         _eb_loc,
                             "tipo_balanza":              eb_tipo,

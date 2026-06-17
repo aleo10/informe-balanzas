@@ -93,8 +93,11 @@ def get_balanzas_de_cliente(key: str) -> list[str]:
     return [r["cod_interno"] for r in rows]
 
 
-def get_balanza_info(cod_interno: str) -> dict:
-    rows = _client().table("balanzas").select("*").eq("cod_interno", cod_interno).limit(1).execute().data
+def get_balanza_info(cod_interno: str, razon_social: str = "") -> dict:
+    q = _client().table("balanzas").select("*").eq("cod_interno", cod_interno)
+    if razon_social:
+        q = q.eq("razon_social", razon_social)
+    rows = q.limit(1).execute().data
     if not rows:
         return {}
     r = rows[0]
@@ -120,6 +123,7 @@ def get_balanza_info(cod_interno: str) -> dict:
         "precintos_ant_indicador":   r.get("precintos_ant_indicador", ""),
         "precintos_vig_indicador":   r.get("precintos_vig_indicador", ""),
         "localidad_cliente":         r.get("localidad_cliente", ""),
+        "razon_social":              r.get("razon_social", ""),
         # alias legacy
         "n_serie":        r.get("n_serie_indicador", ""),
         "cod_aprobacion": r.get("cod_aprobacion_indicador", ""),
