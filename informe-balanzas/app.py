@@ -603,32 +603,38 @@ with st.expander("➕ Agregar Balanza"):
                 st.error("El Código Interno es obligatorio.")
             else:
                 _b_rs, _b_loc = parse_cliente_key(b_cliente)
-                add_balanza({
-                    "razon_social":              _b_rs,
-                    "localidad_cliente":         _b_loc,
-                    "tipo_balanza":              b_tipo,
-                    "mod_indicador":             b_mod_ind,
-                    "marca":                     b_marca,
-                    "n_serie_indicador":         b_ns_ind,
-                    "cod_aprobacion_indicador":  b_ca_ind,
-                    "ubicacion":                 b_ubic,
-                    "plataforma":                b_plat,
-                    "medidas":                   b_medidas,
-                    "n_serie_plataforma":        b_ns_plat,
-                    "cod_aprobacion_plataforma": b_ca_plat,
-                    "ult_verificacion":          b_ult_verif,
-                    "cap_max":                   str(int(b_cap_max)) if b_cap_max else "",
-                    "cap_min":                   str(int(b_cap_min)) if b_cap_min else "",
-                    "div_min":                   str(b_div_min) if b_div_min else "",
-                    "apoyos":                    str(int(b_apoyos)) if b_apoyos else "",
-                    "cod_interno":               b_cod.strip(),
-                    "precintos_ant_plataforma":  "",
-                    "precintos_vig_plataforma":  b_prec_vig_plat,
-                    "precintos_ant_indicador":   "",
-                    "precintos_vig_indicador":   b_prec_vig_ind,
-                })
-                st.success(f"Balanza '{b_cod.strip()}' agregada al cliente '{b_cliente}'.")
-                st.rerun()
+                try:
+                    add_balanza({
+                        "razon_social":              _b_rs,
+                        "localidad_cliente":         _b_loc,
+                        "tipo_balanza":              b_tipo,
+                        "mod_indicador":             b_mod_ind,
+                        "marca":                     b_marca,
+                        "n_serie_indicador":         b_ns_ind,
+                        "cod_aprobacion_indicador":  b_ca_ind,
+                        "ubicacion":                 b_ubic,
+                        "plataforma":                b_plat,
+                        "medidas":                   b_medidas,
+                        "n_serie_plataforma":        b_ns_plat,
+                        "cod_aprobacion_plataforma": b_ca_plat,
+                        "ult_verificacion":          b_ult_verif,
+                        "cap_max":                   str(int(b_cap_max)) if b_cap_max else "",
+                        "cap_min":                   str(int(b_cap_min)) if b_cap_min else "",
+                        "div_min":                   str(b_div_min) if b_div_min else "",
+                        "apoyos":                    str(int(b_apoyos)) if b_apoyos else "",
+                        "cod_interno":               b_cod.strip(),
+                        "precintos_ant_plataforma":  "",
+                        "precintos_vig_plataforma":  b_prec_vig_plat,
+                        "precintos_ant_indicador":   "",
+                        "precintos_vig_indicador":   b_prec_vig_ind,
+                    })
+                    st.success(f"Balanza '{b_cod.strip()}' agregada al cliente '{b_cliente}'.")
+                    st.rerun()
+                except Exception as e:
+                    if "23505" in str(e) or "duplicate key" in str(e).lower():
+                        st.error(f"Ya existe una balanza con el código interno '{b_cod.strip()}' para ese cliente. Usá un código diferente.")
+                    else:
+                        st.error(f"Error al guardar la balanza: {e}")
 
 with st.expander("✏️ Modificar Cliente"):
     clientes_edit = get_clientes()
@@ -725,29 +731,35 @@ with st.expander("✏️ Modificar Balanza"):
                     st.error("El Código Interno es obligatorio.")
                 else:
                     _eb_rs, _eb_loc = parse_cliente_key(eb_cliente2)
-                    update_balanza(eb_sel, {
-                        "razon_social":              _eb_rs,
-                        "localidad_cliente":         _eb_loc,
-                        "tipo_balanza":              eb_tipo,
-                        "mod_indicador":             eb_mod_ind,
-                        "marca":                     eb_marca,
-                        "n_serie_indicador":         eb_ns_ind,
-                        "cod_aprobacion_indicador":  eb_ca_ind,
-                        "ubicacion":                 eb_ubic,
-                        "plataforma":                eb_plat,
-                        "medidas":                   eb_medidas,
-                        "n_serie_plataforma":        eb_ns_plat,
-                        "cod_aprobacion_plataforma": eb_ca_plat,
-                        "ult_verificacion":          eb_ult_verif,
-                        "cap_max":                   str(int(eb_cap_max)) if eb_cap_max else "",
-                        "cap_min":                   str(int(eb_cap_min)) if eb_cap_min else "",
-                        "div_min":                   str(eb_div_min) if eb_div_min else "",
-                        "apoyos":                    str(int(eb_apoyos)) if eb_apoyos else "",
-                        "cod_interno":               eb_cod.strip(),
-                        "precintos_ant_plataforma":  eb_prec_ant_plat,
-                        "precintos_vig_plataforma":  eb_prec_vig_plat,
-                        "precintos_ant_indicador":   eb_prec_ant_ind,
-                        "precintos_vig_indicador":   eb_prec_vig_ind,
-                    })
-                    st.success(f"Balanza '{eb_cod.strip()}' actualizada.")
-                    st.rerun()
+                    try:
+                        update_balanza(eb_sel, {
+                            "razon_social":              _eb_rs,
+                            "localidad_cliente":         _eb_loc,
+                            "tipo_balanza":              eb_tipo,
+                            "mod_indicador":             eb_mod_ind,
+                            "marca":                     eb_marca,
+                            "n_serie_indicador":         eb_ns_ind,
+                            "cod_aprobacion_indicador":  eb_ca_ind,
+                            "ubicacion":                 eb_ubic,
+                            "plataforma":                eb_plat,
+                            "medidas":                   eb_medidas,
+                            "n_serie_plataforma":        eb_ns_plat,
+                            "cod_aprobacion_plataforma": eb_ca_plat,
+                            "ult_verificacion":          eb_ult_verif,
+                            "cap_max":                   str(int(eb_cap_max)) if eb_cap_max else "",
+                            "cap_min":                   str(int(eb_cap_min)) if eb_cap_min else "",
+                            "div_min":                   str(eb_div_min) if eb_div_min else "",
+                            "apoyos":                    str(int(eb_apoyos)) if eb_apoyos else "",
+                            "cod_interno":               eb_cod.strip(),
+                            "precintos_ant_plataforma":  eb_prec_ant_plat,
+                            "precintos_vig_plataforma":  eb_prec_vig_plat,
+                            "precintos_ant_indicador":   eb_prec_ant_ind,
+                            "precintos_vig_indicador":   eb_prec_vig_ind,
+                        })
+                        st.success(f"Balanza '{eb_cod.strip()}' actualizada.")
+                        st.rerun()
+                    except Exception as e:
+                        if "23505" in str(e) or "duplicate key" in str(e).lower():
+                            st.error(f"Ya existe otra balanza con el código interno '{eb_cod.strip()}'. Usá un código diferente.")
+                        else:
+                            st.error(f"Error al actualizar la balanza: {e}")
