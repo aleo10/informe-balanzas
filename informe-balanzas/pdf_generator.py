@@ -349,27 +349,21 @@ def _four_col_table(rows: list, cw: float):
 
 
 def _firma_table(cw: float, firma_b64: str | None, firma_nombre: str = "") -> Table:
-    """Construye la tabla de firmas. Si hay imagen la usa en lugar de la línea."""
+    """Construye la tabla de firmas: imagen (si hay), línea, nombre, leyenda."""
     _sty = ParagraphStyle("fl", fontName="Helvetica", fontSize=8, alignment=TA_CENTER)
-    _sty_bold = ParagraphStyle("flb", fontName="Helvetica-Bold", fontSize=8, alignment=TA_CENTER)
     FIRMA_W = 4 * cm
     FIRMA_H = 1.5 * cm
+    rows = []
     if firma_b64:
         img_buf = io.BytesIO(base64.b64decode(firma_b64))
-        linea_verif = Image(img_buf, width=FIRMA_W, height=FIRMA_H)
-    else:
-        linea_verif = Paragraph("_______________________________", _sty)
-    label_verif_parts = ["Firma y sello del Verificador"]
+        rows.append([Image(img_buf, width=FIRMA_W, height=FIRMA_H), Paragraph("", _sty)])
+    rows.append([Paragraph("_______________________________", _sty),
+                 Paragraph("_______________________________", _sty)])
     if firma_nombre:
-        label_verif_parts.append(f"<b>{firma_nombre}</b>")
-    label_verif = Paragraph("<br/>".join(label_verif_parts), _sty)
-    t = Table(
-        [[linea_verif,
-          Paragraph("_______________________________", _sty)],
-         [label_verif,
-          Paragraph("Firma y sello del Usuario", _sty)]],
-        colWidths=[cw * 0.5, cw * 0.5],
-    )
+        rows.append([Paragraph(f"<b>{firma_nombre}</b>", _sty), Paragraph("", _sty)])
+    rows.append([Paragraph("Firma y sello del Verificador", _sty),
+                 Paragraph("Firma y sello del Usuario", _sty)])
+    t = Table(rows, colWidths=[cw * 0.5, cw * 0.5])
     t.setStyle(_ts(
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("VALIGN", (0, 0), (-1, -1), "BOTTOM"),
