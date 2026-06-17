@@ -300,10 +300,12 @@ def generate_pdf(data: dict) -> bytes:
         ("FONTSIZE", (0, 0), (-1, -1), 8),
         ("TOPPADDING", (0, 0), (-1, -1), 2),
     ))
-    story.append(_section_title("RESULTADO", cw))
-    story.append(_two_col_table(res_data, cw, label_ratio=0.22))
-    story.append(Spacer(1, 36))
-    story.append(firma_table)
+    story.append(KeepTogether([
+        _section_title("RESULTADO", cw),
+        _two_col_table(res_data, cw, label_ratio=0.22),
+        Spacer(1, 36),
+        firma_table,
+    ]))
 
     doc.build(story, canvasmaker=_NumberedCanvas)
     return buf.getvalue()
@@ -500,22 +502,6 @@ def generate_informe_servicio(data: dict) -> bytes:
         story.append(elem)
     for elem in _cuadro("TRABAJOS REALIZADOS", data.get("trabajos_realizados", "")):
         story.append(elem)
-    for elem in _cuadro("RESULTADO/RECOMENDACIONES",
-                        data.get("resultado_servicio", "La balanza se encuentra operativa."), altura=50):
-        story.append(elem)
-
-    # ── Referencia al Informe de Ensayo ───────────────────────────────────────
-    if data.get("nro_if"):
-        ref_style = ParagraphStyle("ref", fontName="Helvetica", fontSize=9, alignment=TA_LEFT)
-        ref = Paragraph(f"<b>INFORME DE ENSAYO N°:</b>  IF-01-{data['nro_if']:04d}", ref_style)
-        ref_table = Table([[ref]], colWidths=[cw])
-        ref_table.setStyle(_box(_ts(
-            ("TOPPADDING", (0, 0), (-1, -1), 4),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ("LEFTPADDING", (0, 0), (-1, -1), 6),
-        )))
-        story.append(ref_table)
-        story.append(Spacer(1, 6))
 
     # ── Firmas ────────────────────────────────────────────────────────────────
     firma_data = [
@@ -528,7 +514,28 @@ def generate_informe_servicio(data: dict) -> bytes:
         ("FONTSIZE", (0, 0), (-1, -1), 8),
         ("TOPPADDING", (0, 0), (-1, -1), 2),
     ))
-    story.append(KeepTogether([Spacer(1, 48), firma_table]))
+
+    # Armar bloque final (resultado + ref IF opcional + firma) todo junto
+    bloque_final = []
+    for elem in _cuadro("RESULTADO/RECOMENDACIONES",
+                        data.get("resultado_servicio", "La balanza se encuentra operativa."), altura=50):
+        bloque_final.append(elem)
+
+    if data.get("nro_if"):
+        ref_style = ParagraphStyle("ref", fontName="Helvetica", fontSize=9, alignment=TA_LEFT)
+        ref = Paragraph(f"<b>INFORME DE ENSAYO N°:</b>  IF-01-{data['nro_if']:04d}", ref_style)
+        ref_table = Table([[ref]], colWidths=[cw])
+        ref_table.setStyle(_box(_ts(
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        )))
+        bloque_final.append(ref_table)
+        bloque_final.append(Spacer(1, 6))
+
+    bloque_final.append(Spacer(1, 28))
+    bloque_final.append(firma_table)
+    story.append(KeepTogether(bloque_final))
 
     doc.build(story, canvasmaker=_NumberedCanvas)
     return buf.getvalue()
