@@ -233,6 +233,13 @@ if _lista:
                     save_prefs(prefs)
                     st.rerun()
 
+            nombre_actual = prefs.get("firma_nombre", "")
+            nombre_input = st.text_input("Aclaración (nombre del verificador)", value=nombre_actual, key="firma_nombre_input")
+            if nombre_input != nombre_actual:
+                prefs["firma_nombre"] = nombre_input
+                save_prefs(prefs)
+                st.rerun()
+
             # ── 4b. TEMPERATURA Y PUESTA A CERO ─────────────────────────────────────
             st.subheader("Temperatura y Puesta a Cero")
             tc1, tc2, tc3 = st.columns(3)
@@ -466,7 +473,8 @@ if _lista:
             }
 
             try:
-                _firma_b64 = prefs.get("firma_img_b64", None)
+                _firma_b64    = prefs.get("firma_img_b64", None)
+                _firma_nombre = prefs.get("firma_nombre", "")
                 is_data = {
                     **datos_base,
                     "nro_is":              int(nro_is),
@@ -475,6 +483,7 @@ if _lista:
                     "resultado_servicio":  resultado_servicio,
                     "nro_if":              int(nro_if) if hacer_ensayo else None,
                     "firma_img_b64":       _firma_b64,
+                    "firma_nombre":        _firma_nombre,
                 }
                 is_bytes = generate_informe_servicio(is_data)
                 save_number(int(nro_is), "IS")
@@ -484,6 +493,7 @@ if _lista:
                         **datos_base,
                         "nro_informe":         int(nro_if),
                         "firma_img_b64":       _firma_b64,
+                        "firma_nombre":        _firma_nombre,
                         "pesa_kg":             wc["pesa_kg"],
                         "cert_pesas_pequenas": cfg.get("cert_pesas_pequenas", ""),
                         "desc_pesas_pequenas": cfg.get("desc_pesas_pequenas", ""),

@@ -291,7 +291,7 @@ def generate_pdf(data: dict) -> bytes:
         ["RESULTADO:", resultado],
         ["OBSERVACIONES:", obs],
     ]
-    firma_table = _firma_table(cw, data.get("firma_img_b64"))
+    firma_table = _firma_table(cw, data.get("firma_img_b64"), data.get("firma_nombre", ""))
     story.append(KeepTogether([
         _section_title("RESULTADO", cw),
         _two_col_table(res_data, cw, label_ratio=0.22),
@@ -348,24 +348,26 @@ def _four_col_table(rows: list, cw: float):
     return t
 
 
-def _firma_table(cw: float, firma_b64: str | None) -> Table:
+def _firma_table(cw: float, firma_b64: str | None, firma_nombre: str = "") -> Table:
     """Construye la tabla de firmas. Si hay imagen la usa en lugar de la línea."""
+    _sty = ParagraphStyle("fl", fontName="Helvetica", fontSize=8, alignment=TA_CENTER)
+    _sty_bold = ParagraphStyle("flb", fontName="Helvetica-Bold", fontSize=8, alignment=TA_CENTER)
     FIRMA_W = 4 * cm
     FIRMA_H = 1.5 * cm
     if firma_b64:
         img_buf = io.BytesIO(base64.b64decode(firma_b64))
-        verificador_cell = Image(img_buf, width=FIRMA_W, height=FIRMA_H)
+        linea_verif = Image(img_buf, width=FIRMA_W, height=FIRMA_H)
     else:
-        verificador_cell = Paragraph("_______________________________",
-                                     ParagraphStyle("fl", fontName="Helvetica", fontSize=8, alignment=TA_CENTER))
+        linea_verif = Paragraph("_______________________________", _sty)
+    label_verif_parts = ["Firma y sello del Verificador"]
+    if firma_nombre:
+        label_verif_parts.append(f"<b>{firma_nombre}</b>")
+    label_verif = Paragraph("<br/>".join(label_verif_parts), _sty)
     t = Table(
-        [[verificador_cell,
-          Paragraph("_______________________________",
-                    ParagraphStyle("fl", fontName="Helvetica", fontSize=8, alignment=TA_CENTER))],
-         [Paragraph("Firma y sello del Verificador",
-                    ParagraphStyle("fl2", fontName="Helvetica", fontSize=8, alignment=TA_CENTER)),
-          Paragraph("Firma y sello del Usuario",
-                    ParagraphStyle("fl2", fontName="Helvetica", fontSize=8, alignment=TA_CENTER))]],
+        [[linea_verif,
+          Paragraph("_______________________________", _sty)],
+         [label_verif,
+          Paragraph("Firma y sello del Usuario", _sty)]],
         colWidths=[cw * 0.5, cw * 0.5],
     )
     t.setStyle(_ts(
@@ -524,7 +526,7 @@ def generate_informe_servicio(data: dict) -> bytes:
         story.append(elem)
 
     # ── Firmas ────────────────────────────────────────────────────────────────
-    firma_table = _firma_table(cw, data.get("firma_img_b64"))
+    firma_table = _firma_table(cw, data.get("firma_img_b64"), data.get("firma_nombre", ""))
 
     # Armar bloque final (resultado + ref IF opcional + firma) todo junto
     bloque_final = []
