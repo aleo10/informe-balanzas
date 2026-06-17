@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 import random
@@ -212,6 +213,24 @@ if _lista:
                     update_config("desc_pesas_grandes",  cfg_desc_gran)
                     update_config("cert_pesas_grandes",  cfg_cert_gran)
                     st.success("Certificados actualizados.")
+                    st.rerun()
+
+            st.markdown("**Firma del Verificador**")
+            firma_actual = prefs.get("firma_img_b64", "")
+            if firma_actual:
+                st.image(base64.b64decode(firma_actual), width=200, caption="Firma guardada")
+            firma_upload = st.file_uploader("Subir imagen de firma (PNG/JPG, fondo transparente recomendado)",
+                                            type=["png", "jpg", "jpeg"], key="firma_upload")
+            if firma_upload:
+                firma_b64 = base64.b64encode(firma_upload.read()).decode()
+                prefs["firma_img_b64"] = firma_b64
+                save_prefs(prefs)
+                st.success("Firma guardada.")
+                st.rerun()
+            if firma_actual:
+                if st.button("🗑️ Eliminar firma guardada", key="del_firma"):
+                    prefs.pop("firma_img_b64", None)
+                    save_prefs(prefs)
                     st.rerun()
 
             # ── 4b. TEMPERATURA Y PUESTA A CERO ─────────────────────────────────────
@@ -447,6 +466,7 @@ if _lista:
             }
 
             try:
+                _firma_b64 = prefs.get("firma_img_b64", None)
                 is_data = {
                     **datos_base,
                     "nro_is":              int(nro_is),
@@ -454,6 +474,7 @@ if _lista:
                     "trabajos_realizados": trabajos_realizados,
                     "resultado_servicio":  resultado_servicio,
                     "nro_if":              int(nro_if) if hacer_ensayo else None,
+                    "firma_img_b64":       _firma_b64,
                 }
                 is_bytes = generate_informe_servicio(is_data)
                 save_number(int(nro_is), "IS")
@@ -462,6 +483,7 @@ if _lista:
                     if_data = {
                         **datos_base,
                         "nro_informe":         int(nro_if),
+                        "firma_img_b64":       _firma_b64,
                         "pesa_kg":             wc["pesa_kg"],
                         "cert_pesas_pequenas": cfg.get("cert_pesas_pequenas", ""),
                         "desc_pesas_pequenas": cfg.get("desc_pesas_pequenas", ""),

@@ -2,6 +2,7 @@
 Generador de PDF de informe de calibración de balanzas.
 Replica el formato de los informes existentes.
 """
+import base64
 import io
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -9,7 +10,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm, mm
 from reportlab.platypus import (
     SimpleDocTemplate, Table, TableStyle, Paragraph,
-    Spacer, HRFlowable, KeepTogether
+    Spacer, HRFlowable, KeepTogether, Image
 )
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.pdfgen import canvas as rl_canvas
@@ -290,16 +291,7 @@ def generate_pdf(data: dict) -> bytes:
         ["RESULTADO:", resultado],
         ["OBSERVACIONES:", obs],
     ]
-    firma_data = [
-        ["_______________________________", "_______________________________"],
-        ["Firma y sello del Verificador", "Firma y sello del Usuario"],
-    ]
-    firma_table = Table(firma_data, colWidths=[cw * 0.5, cw * 0.5])
-    firma_table.setStyle(_ts(
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("FONTSIZE", (0, 0), (-1, -1), 8),
-        ("TOPPADDING", (0, 0), (-1, -1), 2),
-    ))
+    firma_table = _firma_table(cw, data.get("firma_img_b64"))
     story.append(KeepTogether([
         _section_title("RESULTADO", cw),
         _two_col_table(res_data, cw, label_ratio=0.22),
@@ -353,6 +345,34 @@ def _four_col_table(rows: list, cw: float):
         ("TOPPADDING", (0, 0), (-1, -1), 2),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
     )))
+    return t
+
+
+def _firma_table(cw: float, firma_b64: str | None) -> Table:
+    """Construye la tabla de firmas. Si hay imagen la usa en lugar de la línea."""
+    FIRMA_W = 4 * cm
+    FIRMA_H = 1.5 * cm
+    if firma_b64:
+        img_buf = io.BytesIO(base64.b64decode(firma_b64))
+        verificador_cell = Image(img_buf, width=FIRMA_W, height=FIRMA_H)
+    else:
+        verificador_cell = Paragraph("_______________________________",
+                                     ParagraphStyle("fl", fontName="Helvetica", fontSize=8, alignment=TA_CENTER))
+    t = Table(
+        [[verificador_cell,
+          Paragraph("_______________________________",
+                    ParagraphStyle("fl", fontName="Helvetica", fontSize=8, alignment=TA_CENTER))],
+         [Paragraph("Firma y sello del Verificador",
+                    ParagraphStyle("fl2", fontName="Helvetica", fontSize=8, alignment=TA_CENTER)),
+          Paragraph("Firma y sello del Usuario",
+                    ParagraphStyle("fl2", fontName="Helvetica", fontSize=8, alignment=TA_CENTER))]],
+        colWidths=[cw * 0.5, cw * 0.5],
+    )
+    t.setStyle(_ts(
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("VALIGN", (0, 0), (-1, -1), "BOTTOM"),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+    ))
     return t
 
 
@@ -504,16 +524,7 @@ def generate_informe_servicio(data: dict) -> bytes:
         story.append(elem)
 
     # ── Firmas ────────────────────────────────────────────────────────────────
-    firma_data = [
-        ["_______________________________", "_______________________________"],
-        ["Firma y sello del Verificador",  "Firma y sello del Usuario"],
-    ]
-    firma_table = Table(firma_data, colWidths=[cw * 0.5, cw * 0.5])
-    firma_table.setStyle(_ts(
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("FONTSIZE", (0, 0), (-1, -1), 8),
-        ("TOPPADDING", (0, 0), (-1, -1), 2),
-    ))
+    firma_table = _firma_table(cw, data.get("firma_img_b64"))
 
     # Armar bloque final (resultado + ref IF opcional + firma) todo junto
     bloque_final = []
