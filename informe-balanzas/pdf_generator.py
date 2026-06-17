@@ -357,10 +357,10 @@ def _firma_table(cw: float, firma_b64: str | None, firma_nombre: str = "") -> Ta
     if firma_b64:
         img_buf = io.BytesIO(base64.b64decode(firma_b64))
         rows.append([Image(img_buf, width=FIRMA_W, height=FIRMA_H), Paragraph("", _sty)])
-    rows.append([Paragraph("_______________________________", _sty),
-                 Paragraph("_______________________________", _sty)])
     if firma_nombre:
         rows.append([Paragraph(f"<b>{firma_nombre}</b>", _sty), Paragraph("", _sty)])
+    rows.append([Paragraph("_______________________________", _sty),
+                 Paragraph("_______________________________", _sty)])
     rows.append([Paragraph("Firma y sello del Verificador", _sty),
                  Paragraph("Firma y sello del Usuario", _sty)])
     t = Table(rows, colWidths=[cw * 0.5, cw * 0.5])
