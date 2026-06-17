@@ -110,7 +110,8 @@ if _lista:
 
 if _lista:
     balanza_sel = st.selectbox("Balanza (Código interno)", balanzas)
-    b = get_balanza_info(balanza_sel)
+    _rs_sel, _ = parse_cliente_key(cliente_sel)
+    b = get_balanza_info(balanza_sel, razon_social=_rs_sel)
 
     if b:
         col_b1, col_b2, col_b3, col_b4 = st.columns(4)
@@ -764,7 +765,7 @@ with st.expander("✏️ Modificar Balanza"):
                     st.error("El Código Interno es obligatorio.")
                 else:
                     _eb_rs, _eb_loc = parse_cliente_key(eb_cliente2)
-                    st.info(f"DEBUG — cod_interno: `{eb_sel}` | razon_social_orig: `{_eb_rs_orig}`")
+
                     try:
                         update_balanza(eb_sel, _eb_rs_orig, {
                             "razon_social":              _eb_rs,
