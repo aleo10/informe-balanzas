@@ -764,6 +764,7 @@ with st.expander("✏️ Modificar Balanza"):
                     st.error("El Código Interno es obligatorio.")
                 else:
                     _eb_rs, _eb_loc = parse_cliente_key(eb_cliente2)
+                    st.info(f"DEBUG — cod_interno: `{eb_sel}` | razon_social_orig: `{_eb_rs_orig}`")
                     try:
                         update_balanza(eb_sel, _eb_rs_orig, {
                             "razon_social":              _eb_rs,
