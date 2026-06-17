@@ -153,7 +153,7 @@ def add_balanza(d: dict):
     }).execute()
 
 
-def update_balanza(cod_interno_original: str, d: dict):
+def update_balanza(cod_interno_original: str, razon_social_original: str, d: dict):
     _client().table("balanzas").update({
         "razon_social":              d.get("razon_social", ""),
         "localidad_cliente":         d.get("localidad_cliente", ""),
@@ -177,7 +177,7 @@ def update_balanza(cod_interno_original: str, d: dict):
         "precintos_vig_plataforma":  d.get("precintos_vig_plataforma", ""),
         "precintos_ant_indicador":   d.get("precintos_ant_indicador", ""),
         "precintos_vig_indicador":   d.get("precintos_vig_indicador", ""),
-    }).eq("cod_interno", cod_interno_original).execute()
+    }).eq("cod_interno", cod_interno_original).eq("razon_social", razon_social_original).execute()
 
 
 def update_precintos(cod_interno: str,

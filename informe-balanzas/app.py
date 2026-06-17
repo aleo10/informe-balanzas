@@ -764,7 +764,7 @@ with st.expander("✏️ Modificar Balanza"):
                 else:
                     _eb_rs, _eb_loc = parse_cliente_key(eb_cliente2)
                     try:
-                        update_balanza(eb_sel, {
+                        update_balanza(eb_sel, eb.get("razon_social", ""), {
                             "razon_social":              _eb_rs,
                             "localidad_cliente":         _eb_loc,
                             "tipo_balanza":              eb_tipo,
