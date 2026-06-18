@@ -81,6 +81,7 @@ st.header("1. Datos generales")
 col1, col2, col3 = st.columns(3)
 with col1:
     fecha = st.date_input("Fecha", value=datetime.date.today())
+    fecha_calibracion = st.date_input("Fecha de Calibración", value=datetime.date.today())
 with col2:
     nro_is_default = get_next_number("IS")
     nro_is = st.number_input("N° Informe de Servicio (IS)", min_value=1, value=nro_is_default, step=1)
@@ -118,7 +119,7 @@ if _lista:
         col_b1.metric("Tipo", b["tipo_balanza"])
         col_b2.metric("Cap. Máx", f"{b['cap_max']} kg")
         col_b3.metric("Div. Mín", f"{b['div_min']} kg")
-        col_b4.metric("Ult. Verificación", b["ult_verificacion"] or "—")
+        col_b4.metric("Últ. Calibración", b["ult_verificacion"] or "—")
 
         c1, c2 = st.columns(2)
         with c1:
@@ -468,9 +469,10 @@ if _lista:
             balanza_para_pdf["precintos_vig_indicador"]  = nuevo_vig_indicador
 
             datos_base = {
-                "fecha":    fecha.strftime("%d/%m/%Y"),
-                "cliente":  cliente_info,
-                "balanza":  balanza_para_pdf,
+                "fecha":              fecha.strftime("%d/%m/%Y"),
+                "fecha_calibracion":  fecha_calibracion.strftime("%d/%m/%Y"),
+                "cliente":            cliente_info,
+                "balanza":            balanza_para_pdf,
             }
 
             try:
@@ -617,7 +619,7 @@ with st.expander("➕ Agregar Balanza"):
             with fs2: b_cap_min   = st.number_input("Cap. Mín (kg)", min_value=0.0, step=1.0)
             with fs3: b_div_min   = st.number_input("Div. Mín (kg)", min_value=0.0, step=0.001, format="%.3f")
             with fs4: b_apoyos    = st.number_input("Apoyos",        min_value=0,   step=1)
-            with fs5: b_ult_verif = st.text_input("Ult. Verificación", placeholder="dd/mm/aaaa")
+            with fs5: b_ult_verif = st.text_input("Últ. Calibración", placeholder="dd/mm/aaaa")
             with fs6: pass
 
             st.markdown("**Precintos (opcional)**")
@@ -745,7 +747,7 @@ with st.expander("✏️ Modificar Balanza"):
                 with efs2: eb_cap_min   = st.number_input("Cap. Mín (kg)",  value=_float(eb.get("cap_min", 0)),   min_value=0.0, step=1.0)
                 with efs3: eb_div_min   = st.number_input("Div. Mín (kg)",  value=_float(eb.get("div_min", 0)),   min_value=0.0, step=0.001, format="%.3f")
                 with efs4: eb_apoyos    = st.number_input("Apoyos",         value=_int(eb.get("apoyos", 0)),      min_value=0,   step=1)
-                with efs5: eb_ult_verif = st.text_input("Ult. Verificación", value=eb.get("ult_verificacion", ""))
+                with efs5: eb_ult_verif = st.text_input("Últ. Calibración", value=eb.get("ult_verificacion", ""))
 
                 st.markdown("**Precintos**")
                 efpr1, efpr2 = st.columns(2)

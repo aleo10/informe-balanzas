@@ -139,7 +139,7 @@ def generate_pdf(data: dict) -> bytes:
     inst3 = [
         [_lbl("TIPO BALANZA:"),    _val(b["tipo_balanza"]),
          _lbl("UBICACION:"),       _val(b["ubicacion"]),
-         _lbl("Ult. Verif.:"),     _val(b["ult_verificacion"])],
+         _lbl("Fec. Calib.:"),     _val(data.get("fecha_calibracion", b.get("ult_verificacion", "")))],
         [_lbl("MOD. INDICADOR:"),  _val(b["mod_indicador"]),
          _lbl("PLATAFORMA:"),      _val(b["plataforma"]),
          _lbl("CAP. MAX:"),        _val(f"{b['cap_max']} kg")],
@@ -448,7 +448,7 @@ def generate_informe_servicio(data: dict) -> bytes:
     inst3 = [
         [_lbl("TIPO BALANZA:"),   _val(b["tipo_balanza"]),
          _lbl("UBICACION:"),      _val(b["ubicacion"]),
-         _lbl("Ult. Verif.:"),    _val(b["ult_verificacion"])],
+         _lbl("Fec. Calib.:"),    _val(data.get("fecha_calibracion", b.get("ult_verificacion", "")))],
         [_lbl("MOD. INDICADOR:"), _val(b["mod_indicador"]),
          _lbl("PLATAFORMA:"),     _val(b["plataforma"]),
          _lbl("CAP. MAX:"),       _val(f"{b['cap_max']} kg")],
